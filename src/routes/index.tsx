@@ -1,29 +1,45 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Nav } from "@/components/site/Nav";
+import { Hero } from "@/components/site/Hero";
+import { About } from "@/components/site/About";
+import { Services } from "@/components/site/Services";
+import { Portfolio } from "@/components/site/Portfolio";
+import { Process } from "@/components/site/Process";
+import { Contact } from "@/components/site/Contact";
+import { Footer } from "@/components/site/Footer";
+import { useReveal } from "@/hooks/use-reveal";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "Connected Webdesign — Modernes Webdesign aus Heidelberg" },
+      {
+        name: "description",
+        content:
+          "Connected Webdesign — Freelance Webdesign aus Heidelberg von Robin Lehmann. Schnelle, moderne Websites für kleine Unternehmen.",
+      },
+      { property: "og:title", content: "Connected Webdesign — Webdesign aus Heidelberg" },
+      {
+        property: "og:description",
+        content: "Professionelles Webdesign für kleine Unternehmen in Heidelberg.",
+      },
     ],
   }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
+  useReveal();
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <main className="min-h-screen bg-background text-foreground overflow-x-hidden">
+      <Nav />
+      <Hero />
+      <About />
+      <Services />
+      <Portfolio />
+      <Process />
+      <Contact />
+      <Footer />
+    </main>
   );
 }
