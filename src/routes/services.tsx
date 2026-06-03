@@ -34,6 +34,7 @@ function ServicesPage() {
       />
       <Services />
       <CodeShowcase />
+      <LighthouseStats />
     </main>
   );
 }
