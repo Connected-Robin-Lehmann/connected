@@ -1,15 +1,19 @@
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Quote } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import tennis from "@/assets/tennisclub.jpg";
 
-export function Portfolio() {
+export function Portfolio({ compact = false }: { compact?: boolean }) {
   return (
-    <section id="portfolio" className="py-32 relative">
+    <section id="portfolio" className={compact ? "py-24 relative" : "py-32 relative pt-40"}>
       <div className="mx-auto max-w-7xl px-6">
         <div className="reveal max-w-2xl mb-16">
           <div className="text-sm uppercase tracking-[0.2em] text-primary mb-4">Referenzen</div>
           <h2 className="text-4xl md:text-5xl font-bold">
-            Ausgewählte<br /><span className="glow-text">Projekte.</span>
+            Unsere<br /><span className="glow-text">Projekte.</span>
           </h2>
+          <p className="mt-6 text-lg text-muted-foreground">
+            Websites, die funktionieren — für zufriedene Kunden.
+          </p>
         </div>
 
         <div className="reveal group relative glass rounded-3xl overflow-hidden">
@@ -18,7 +22,7 @@ export function Portfolio() {
               <div className="absolute -inset-20 bg-primary/20 blur-3xl opacity-60 animate-pulse-glow" />
               <img
                 src={tennis}
-                alt="Website Tennisclub Schwarz Gelb Heidelberg"
+                alt="Website TC Schwarz-Gelb Heidelberg e.V."
                 width={1280}
                 height={800}
                 loading="lazy"
@@ -30,12 +34,18 @@ export function Portfolio() {
                 Vereinswebsite
               </div>
               <h3 className="text-3xl md:text-4xl font-bold leading-tight">
-                Tennisclub Schwarz Gelb Heidelberg
+                TC Schwarz-Gelb Heidelberg e.V.
               </h3>
+              <p className="mt-2 text-muted-foreground">Tennisverein mit über 600 Mitgliedern</p>
               <p className="mt-5 text-muted-foreground leading-relaxed">
-                Ein moderner Webauftritt für einen traditionsreichen Heidelberger Tennisverein —
-                mit klarer Struktur, Vereinsfarben und allen wichtigen Infos für Mitglieder und Gäste auf einen Blick.
+                Eine moderne Vereins-Website mit Veranstaltungen, News und Trainingszeiten —
+                übersichtlich gestaltet und für Mitglieder wie Gäste leicht zu bedienen.
               </p>
+              <ul className="mt-5 space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Übersichtliche Darstellung aller Vereinsinfos</li>
+                <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Einfache Verwaltung von Events & News</li>
+                <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-primary" /> Optimiert für Smartphone & Desktop</li>
+              </ul>
               <div className="mt-6 flex flex-wrap gap-2">
                 {["Webdesign", "Entwicklung", "CMS"].map((t) => (
                   <span key={t} className="rounded-full border border-white/10 px-3 py-1 text-xs text-muted-foreground">
@@ -44,15 +54,48 @@ export function Portfolio() {
                 ))}
               </div>
               <a
-                href="#"
+                href="https://schwarzgelb-heidelberg.de"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="mt-8 inline-flex items-center gap-2 self-start rounded-full bg-white/5 border border-white/10 px-6 py-3 text-sm font-medium hover:bg-primary hover:border-primary transition"
               >
-                Website ansehen
+                schwarzgelb-heidelberg.de
                 <ArrowUpRight className="h-4 w-4" />
               </a>
             </div>
           </div>
         </div>
+
+        {!compact && (
+          <div className="reveal mt-8 glass rounded-3xl p-8 md:p-10 flex gap-5 items-start">
+            <Quote className="h-8 w-8 text-primary shrink-0" />
+            <div>
+              <p className="text-xl md:text-2xl font-display leading-snug">
+                „Very very nice, clean, easy to navigate, professional!"
+              </p>
+              <div className="mt-3 text-sm text-muted-foreground">— Vereinsmitglied, TC Schwarz-Gelb Heidelberg</div>
+            </div>
+          </div>
+        )}
+
+        {!compact && (
+          <div className="reveal mt-16 relative overflow-hidden rounded-3xl p-10 md:p-16 text-center glass">
+            <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,oklch(0.58_0.22_264/0.3),transparent_60%)]" />
+            <h3 className="text-3xl md:text-5xl font-bold">
+              Ihr Projekt könnte<br /><span className="glow-text">hier stehen.</span>
+            </h3>
+            <p className="mt-5 max-w-xl mx-auto text-muted-foreground">
+              Lassen Sie uns gemeinsam eine Website erstellen, auf die Sie stolz sein können.
+            </p>
+            <Link
+              to="/contact"
+              className="btn-primary mt-8 inline-flex items-center gap-2 rounded-full px-7 py-3.5 font-medium hover:brightness-110"
+            >
+              Projekt besprechen
+              <ArrowUpRight className="h-4 w-4" />
+            </Link>
+          </div>
+        )}
       </div>
     </section>
   );
