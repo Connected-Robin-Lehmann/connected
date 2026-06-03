@@ -1,39 +1,54 @@
-import { Globe, Sparkles, Rocket } from "lucide-react";
+import { Code2, ShieldCheck, Users } from "lucide-react";
 
-const services = [
+export const services = [
   {
-    icon: Globe,
-    title: "Website",
-    price: "ab 1.200 €",
-    desc: "Eine neue, individuelle Website für dein Unternehmen — modern, schnell und auf dich zugeschnitten.",
-    features: ["Bis zu 5 Seiten", "Responsive Design", "SEO-Grundlagen"],
+    icon: Code2,
+    title: "Webdesign & Entwicklung",
+    desc: "Moderne, responsive Websites mit benutzerfreundlichem Design — individuell für dein Unternehmen entwickelt.",
+    features: [
+      "Responsive Design",
+      "SEO-optimierte Strukturen",
+      "Schnelle Ladezeiten",
+      "Barrierefreie Gestaltung",
+      "Content Management Systeme",
+    ],
   },
   {
-    icon: Sparkles,
-    title: "Website Redesign",
-    price: "ab 1.200 €",
-    desc: "Deine bestehende Seite wirkt veraltet? Ich gebe ihr ein frisches, professionelles Gesicht.",
-    features: ["Visuelles Refresh", "Performance-Boost", "Mobile-Optimierung"],
+    icon: ShieldCheck,
+    title: "Wartung & Updates",
+    desc: "Kontinuierliche Pflege deiner Website für maximale Sicherheit und Stabilität — ohne dass du dich darum kümmern musst.",
+    features: [
+      "Regelmäßige Sicherheitsupdates",
+      "Performance-Optimierung",
+      "Backup & Recovery",
+      "Bug-Fixes",
+      "Technische Überwachung",
+    ],
     featured: true,
   },
   {
-    icon: Rocket,
-    title: "Landingpage",
-    price: "ab 800 €",
-    desc: "Eine fokussierte Seite für dein Angebot, Event oder deine Kampagne — schnell live, schnell wirksam.",
-    features: ["One-Pager", "Conversion-Fokus", "In ~1 Woche live"],
+    icon: Users,
+    title: "Management & Moderation",
+    desc: "Professionelle Betreuung mit persönlichem Service — ich kümmere mich um deine Inhalte und bin dein direkter Ansprechpartner.",
+    features: [
+      "Content-Management",
+      "Social Media Integration",
+      "Analytics & Reporting",
+      "Persönlicher Ansprechpartner",
+      "Schneller Support",
+    ],
   },
 ];
 
-export function Services() {
+export function Services({ compact = false }: { compact?: boolean }) {
   return (
-    <section id="services" className="py-32 relative">
+    <section id="services" className={compact ? "py-24 relative" : "py-32 relative"}>
       <div className="mx-auto max-w-7xl px-6">
         <div className="reveal max-w-2xl mb-16">
           <div className="text-sm uppercase tracking-[0.2em] text-primary mb-4">Leistungen</div>
           <h2 className="text-4xl md:text-5xl font-bold">
-            Klare Pakete.<br />
-            <span className="glow-text">Faire Preise.</span>
+            Alles aus einer Hand.<br />
+            <span className="glow-text">Persönlich betreut.</span>
           </h2>
         </div>
 
@@ -53,7 +68,6 @@ export function Services() {
                 <s.icon className="h-7 w-7" />
               </div>
               <h3 className="mt-6 text-2xl font-bold">{s.title}</h3>
-              <div className="mt-1 text-primary font-medium">{s.price}</div>
               <p className="mt-4 text-muted-foreground leading-relaxed">{s.desc}</p>
               <ul className="mt-6 space-y-2 text-sm">
                 {s.features.map((f) => (
@@ -63,7 +77,6 @@ export function Services() {
                   </li>
                 ))}
               </ul>
-
               <div className="pointer-events-none absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity bg-[radial-gradient(circle_at_top,oklch(0.58_0.22_264/0.2),transparent_60%)]" />
             </div>
           ))}

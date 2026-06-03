@@ -1,13 +1,12 @@
 import { ArrowRight, MapPin } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 export function Hero() {
   return (
     <section id="top" className="relative min-h-screen flex items-center pt-32 pb-20 overflow-hidden">
-      {/* Background glow */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[900px] rounded-full bg-primary/20 blur-[140px]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,oklch(0.58_0.22_264/0.15),transparent_60%)]" />
-        {/* grid */}
         <div className="absolute inset-0 opacity-[0.06] [background-image:linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] [background-size:60px_60px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]" />
       </div>
 
@@ -15,7 +14,7 @@ export function Hero() {
         <div className="max-w-4xl">
           <div className="inline-flex items-center gap-2 rounded-full glass px-4 py-1.5 text-xs text-muted-foreground animate-fade-up">
             <MapPin className="h-3.5 w-3.5 text-primary" />
-            Freelance Webdesign · Heidelberg
+            Freelance Webentwicklung · Heidelberg
           </div>
 
           <h1
@@ -31,27 +30,27 @@ export function Hero() {
             className="mt-8 max-w-2xl text-lg md:text-xl text-muted-foreground leading-relaxed animate-fade-up"
             style={{ animationDelay: "0.2s" }}
           >
-            Professionelles Webdesign für kleine Unternehmen in Heidelberg —
-            schnell, modern und unkompliziert.
+            Professionelle Webentwicklung, Wartung und Betreuung für kleine
+            Unternehmen in Heidelberg — schnell, modern und persönlich.
           </p>
 
           <div
             className="mt-10 flex flex-wrap items-center gap-4 animate-fade-up"
             style={{ animationDelay: "0.3s" }}
           >
-            <a
-              href="#contact"
+            <Link
+              to="/contact"
               className="btn-primary group inline-flex items-center gap-2 rounded-full px-7 py-3.5 font-medium hover:[&]:[transform:translateY(-2px)] hover:brightness-110"
             >
               Projekt anfragen
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </a>
-            <a
-              href="#portfolio"
+            </Link>
+            <Link
+              to="/references"
               className="inline-flex items-center gap-2 rounded-full border border-white/15 px-7 py-3.5 font-medium hover:bg-white/5 transition"
             >
               Referenzen ansehen
-            </a>
+            </Link>
           </div>
 
           <div

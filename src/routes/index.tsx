@@ -1,27 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Nav } from "@/components/site/Nav";
 import { Hero } from "@/components/site/Hero";
 import { About } from "@/components/site/About";
 import { Services } from "@/components/site/Services";
 import { Portfolio } from "@/components/site/Portfolio";
 import { Process } from "@/components/site/Process";
 import { Contact } from "@/components/site/Contact";
-import { Footer } from "@/components/site/Footer";
-import { useReveal } from "@/hooks/use-reveal";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Connected Webdesign — Modernes Webdesign aus Heidelberg" },
+      { title: "Connected — Webdesign & Webentwicklung aus Heidelberg" },
       {
         name: "description",
         content:
-          "Connected Webdesign — Freelance Webdesign aus Heidelberg von Robin Lehmann. Schnelle, moderne Websites für kleine Unternehmen.",
+          "Connected Webdesign — Freelance Webentwicklung aus Heidelberg von Robin Lehmann. Schnelle, moderne Websites für kleine Unternehmen.",
       },
-      { property: "og:title", content: "Connected Webdesign — Webdesign aus Heidelberg" },
+      { property: "og:title", content: "Connected — Webdesign aus Heidelberg" },
       {
         property: "og:description",
-        content: "Professionelles Webdesign für kleine Unternehmen in Heidelberg.",
+        content: "Professionelle Webentwicklung für kleine Unternehmen in Heidelberg.",
       },
     ],
   }),
@@ -29,17 +26,14 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  useReveal();
   return (
-    <main className="min-h-screen bg-background text-foreground overflow-x-hidden">
-      <Nav />
+    <main>
       <Hero />
-      <About />
-      <Services />
-      <Portfolio />
+      <Services compact />
+      <About compact />
+      <Portfolio compact />
       <Process />
-      <Contact />
-      <Footer />
+      <Contact compact />
     </main>
   );
 }
