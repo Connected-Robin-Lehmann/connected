@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Services } from "@/components/site/Services";
 import { CodeShowcase } from "@/components/site/CodeShowcase";
 import { Hero as PageHero } from "@/components/site/PageHero";
+import { LighthouseStats } from "@/components/site/LighthouseStats";
 
 export const Route = createFileRoute("/services")({
   head: () => ({
