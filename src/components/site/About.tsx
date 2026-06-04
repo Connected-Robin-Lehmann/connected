@@ -29,7 +29,7 @@ export function About({ compact = false }: { compact?: boolean }) {
                   src={robin}
                   alt="Robin Lehmann, Webentwickler aus Heidelberg"
                   width={800}
-                  height={1024}
+                  height={800}
                   loading="lazy"
                   className="w-full h-full object-cover"
                 />
