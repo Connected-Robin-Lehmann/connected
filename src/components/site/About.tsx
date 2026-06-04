@@ -1,4 +1,4 @@
-import robin from "@/assets/robin.jpg";
+import robin from "@/assets/robin.png";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Target, Handshake, Zap } from "lucide-react";
 
@@ -24,12 +24,12 @@ export function About({ compact = false }: { compact?: boolean }) {
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div className="reveal relative">
               <div className="absolute -inset-4 bg-primary/20 blur-3xl rounded-full" />
-              <div className="relative glass rounded-3xl overflow-hidden aspect-[4/5] max-w-md">
+              <div className="relative glass rounded-3xl overflow-hidden aspect-square max-w-md">
                 <img
                   src={robin}
                   alt="Robin Lehmann, Webentwickler aus Heidelberg"
                   width={800}
-                  height={1024}
+                  height={800}
                   loading="lazy"
                   className="w-full h-full object-cover"
                 />
