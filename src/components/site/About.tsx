@@ -1,4 +1,4 @@
-import robin from "@/assets/robin.jpg";
+import robin from "@/assets/robin.png";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Target, Handshake, Zap } from "lucide-react";
 
