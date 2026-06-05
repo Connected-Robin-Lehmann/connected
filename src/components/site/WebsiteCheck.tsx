@@ -297,72 +297,84 @@ export function WebsiteCheck() {
           </div>
         )}
 
-        {result && !loading && (
+        {(result || dsgvo || dsgvoError) && !loading && (
           <div className="space-y-6 animate-fade-up">
-            {/* Overall summary card */}
-            <div className="glass rounded-3xl p-8 md:p-10">
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div className="flex items-center gap-6">
-                  <ScoreGauge value={avg} color={scoreColor(avg)} size={120} />
-                  <div>
-                    <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-1">
-                      Gesamteinstufung
+            {result && (
+              <>
+                {/* Overall summary card */}
+                <div className="glass rounded-3xl p-8 md:p-10">
+                  <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
+                    <div className="flex items-center gap-6">
+                      <ScoreGauge value={avg} color={scoreColor(avg)} size={120} />
+                      <div>
+                        <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                          Gesamteinstufung Performance
+                        </div>
+                        <div className="text-3xl font-bold font-display" style={{ color: scoreColor(avg) }}>
+                          {scoreLabel(avg)}
+                        </div>
+                        <div className="text-sm text-muted-foreground mt-1 break-all">{result.url}</div>
+                      </div>
                     </div>
-                    <div className="text-3xl font-bold font-display" style={{ color: scoreColor(avg) }}>
-                      {scoreLabel(avg)}
+                    <div className="flex-1 md:border-l md:border-white/10 md:pl-8">
+                      <div className="flex items-center gap-2 text-sm uppercase tracking-[0.2em] text-primary mb-3">
+                        <CheckCircle2 className="h-4 w-4" /> Zusammenfassung
+                      </div>
+                      <p className="text-muted-foreground leading-relaxed">{summary}</p>
                     </div>
-                    <div className="text-sm text-muted-foreground mt-1 break-all">{result.url}</div>
                   </div>
                 </div>
-                <div className="flex-1 md:border-l md:border-white/10 md:pl-8">
-                  <div className="flex items-center gap-2 text-sm uppercase tracking-[0.2em] text-primary mb-3">
-                    <CheckCircle2 className="h-4 w-4" /> Zusammenfassung
-                  </div>
-                  <p className="text-muted-foreground leading-relaxed">{summary}</p>
+
+                {/* Category scores */}
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {categoryConfig.map((c) => {
+                    const v = result.scores[c.key];
+                    return (
+                      <div key={c.key} className="glass rounded-3xl p-6 text-center">
+                        <ScoreGauge value={v} color={scoreColor(v)} />
+                        <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary mt-4 mb-2">
+                          <c.icon className="h-4 w-4" />
+                        </div>
+                        <h3 className="font-bold">{c.label}</h3>
+                        <div className="text-xs text-muted-foreground mt-1" style={{ color: scoreColor(v) }}>
+                          {scoreLabel(v)}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-            </div>
 
-            {/* Category scores */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {categoryConfig.map((c) => {
-                const v = result.scores[c.key];
-                return (
-                  <div key={c.key} className="glass rounded-3xl p-6 text-center">
-                    <ScoreGauge value={v} color={scoreColor(v)} />
-                    <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary mt-4 mb-2">
-                      <c.icon className="h-4 w-4" />
-                    </div>
-                    <h3 className="font-bold">{c.label}</h3>
-                    <div className="text-xs text-muted-foreground mt-1" style={{ color: scoreColor(v) }}>
-                      {scoreLabel(v)}
-                    </div>
+                {/* Core web vitals */}
+                <div className="glass rounded-3xl p-8">
+                  <div className="flex items-center gap-2 text-sm uppercase tracking-[0.2em] text-primary mb-6">
+                    <Clock className="h-4 w-4" /> Core Web Vitals & Metriken
                   </div>
-                );
-              })}
-            </div>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {metricConfig.map((m) => {
+                      const v = result.metrics[m.key];
+                      return (
+                        <div key={m.key} className="rounded-2xl bg-white/[0.03] border border-white/5 p-5">
+                          <div className="text-xs text-muted-foreground">{m.label}</div>
+                          <div className="text-2xl font-bold font-display mt-1">{v ?? "—"}</div>
+                          <div className="text-xs text-muted-foreground mt-1">{m.hint}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
 
-            {/* Core web vitals */}
-            <div className="glass rounded-3xl p-8">
-              <div className="flex items-center gap-2 text-sm uppercase tracking-[0.2em] text-primary mb-6">
-                <Clock className="h-4 w-4" /> Core Web Vitals & Metriken
+            {/* DSGVO block */}
+            {dsgvo && <DsgvoBlock data={dsgvo} />}
+            {dsgvoError && !dsgvo && (
+              <div className="glass rounded-3xl p-6 flex items-center gap-3 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4" /> DSGVO-Analyse fehlgeschlagen: {dsgvoError}
               </div>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {metricConfig.map((m) => {
-                  const v = result.metrics[m.key];
-                  return (
-                    <div key={m.key} className="rounded-2xl bg-white/[0.03] border border-white/5 p-5">
-                      <div className="text-xs text-muted-foreground">{m.label}</div>
-                      <div className="text-2xl font-bold font-display mt-1">{v ?? "—"}</div>
-                      <div className="text-xs text-muted-foreground mt-1">{m.hint}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            )}
 
             {/* Screenshot */}
-            {result.screenshot && (
+            {result?.screenshot && (
               <div className="glass rounded-3xl p-8">
                 <div className="flex items-center gap-2 text-sm uppercase tracking-[0.2em] text-primary mb-6">
                   <ImageIcon className="h-4 w-4" /> Vorschau der analysierten Seite
@@ -381,7 +393,7 @@ export function WebsiteCheck() {
             <div className="glass rounded-3xl p-8 text-center">
               <h3 className="text-2xl font-bold mb-2">Nicht zufrieden mit dem Ergebnis?</h3>
               <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
-                Ich helfe Ihnen, Ihre Website auf 90+ in allen Kategorien zu bringen — schnell, modern und persönlich betreut.
+                Ich helfe Ihnen, Ihre Website auf 90+ in allen Kategorien zu bringen und DSGVO-konform aufzustellen — schnell, modern und persönlich betreut.
               </p>
               <a
                 href="/contact"
