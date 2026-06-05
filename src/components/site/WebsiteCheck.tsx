@@ -4,8 +4,10 @@ import {
   Search, Loader2, Zap, Eye, ShieldCheck, Gauge as GaugeIcon, Smartphone, Monitor,
   AlertCircle, CheckCircle2, Clock, Image as ImageIcon, ShieldAlert, XCircle,
   AlertTriangle, ChevronDown, Lock, Cookie, Globe, FileText, ScrollText,
+  Sparkles, Server, Download,
 } from "lucide-react";
 import { checkDsgvo, type DsgvoResult, type DsgvoStatus, type DsgvoFinding } from "@/lib/dsgvo.functions";
+import { extendedAudit, type ExtendedAuditResult, type AuditStatus, type AuditItem } from "@/lib/extended-audit.functions";
 
 const API_KEY = "AIzaSyDuiRz2R4yNltsdDpEHiE6iPRm4KIFxoQ0";
 
@@ -149,7 +151,11 @@ export function WebsiteCheck() {
   const [result, setResult] = useState<CheckResult | null>(null);
   const [dsgvo, setDsgvo] = useState<DsgvoResult | null>(null);
   const [dsgvoError, setDsgvoError] = useState<string | null>(null);
+  const [extended, setExtended] = useState<ExtendedAuditResult | null>(null);
+  const [extendedError, setExtendedError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const runDsgvo = useServerFn(checkDsgvo);
+  const runExtended = useServerFn(extendedAudit);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,17 +169,22 @@ export function WebsiteCheck() {
     }
     setError(null);
     setDsgvoError(null);
+    setExtendedError(null);
     setLoading(true);
     setResult(null);
     setDsgvo(null);
-    const [lh, dg] = await Promise.allSettled([
+    setExtended(null);
+    const [lh, dg, ex] = await Promise.allSettled([
       fetchPagespeed(normalized, strategy),
       runDsgvo({ data: { url: normalized } }),
+      runExtended({ data: { url: normalized } }),
     ]);
     if (lh.status === "fulfilled") setResult(lh.value);
     else setError(lh.reason instanceof Error ? lh.reason.message : "Lighthouse-Analyse fehlgeschlagen");
     if (dg.status === "fulfilled") setDsgvo(dg.value);
     else setDsgvoError(dg.reason instanceof Error ? dg.reason.message : "DSGVO-Analyse fehlgeschlagen");
+    if (ex.status === "fulfilled") setExtended(ex.value);
+    else setExtendedError(ex.reason instanceof Error ? ex.reason.message : "Detail-Analyse fehlgeschlagen");
     setLoading(false);
   };
 
@@ -210,6 +221,37 @@ export function WebsiteCheck() {
     return `Kritisches Ergebnis – die Seite hat in mehreren Bereichen erhebliche Probleme${weak.length ? ` (${weak.join(", ")})` : ""}. Eine grundlegende Modernisierung ist empfehlenswert.`;
   })();
 
+  const handleExportPdf = async () => {
+    if (!result && !dsgvo && !extended) return;
+    setExporting(true);
+    try {
+      const { exportReport } = await import("@/lib/report-pdf");
+      await exportReport({
+        url: result?.url ?? dsgvo?.finalUrl ?? extended?.finalUrl ?? url,
+        strategy,
+        generatedAt: new Date(),
+        lighthouse: result
+          ? {
+              scores: result.scores,
+              metrics: result.metrics,
+              screenshot: result.screenshot,
+            }
+          : null,
+        dsgvo,
+        extended,
+        summary,
+      });
+    } catch (err) {
+      console.error(err);
+      setError("PDF-Export fehlgeschlagen. Bitte erneut versuchen.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const hasAnyResult = !!(result || dsgvo || extended);
+  const allDone = !loading && hasAnyResult;
+
   return (
     <section id="check" className="py-32 relative">
       <div className="pointer-events-none absolute inset-0 -z-10">
@@ -224,7 +266,7 @@ export function WebsiteCheck() {
           </h2>
           <p className="mt-4 text-muted-foreground text-lg leading-relaxed">
             Analysieren Sie Ihre Seite in Sekunden mit Google Lighthouse — Performance, SEO,
-            Barrierefreiheit und Best Practices auf einen Blick.
+            Barrierefreiheit, DSGVO & Detail-Checks auf einen Blick.
           </p>
         </div>
 
@@ -293,12 +335,32 @@ export function WebsiteCheck() {
         {loading && (
           <div className="glass rounded-3xl p-12 text-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">Lighthouse- & DSGVO-Analyse laufen – einen Moment bitte…</p>
+            <p className="text-muted-foreground">Lighthouse-, DSGVO- & Detail-Analyse laufen – einen Moment bitte…</p>
           </div>
         )}
 
-        {(result || dsgvo || dsgvoError) && !loading && (
+        {allDone && (
           <div className="space-y-6 animate-fade-up">
+            {/* Export bar */}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleExportPdf}
+                disabled={exporting}
+                className="glass inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium hover:brightness-110 transition disabled:opacity-50"
+              >
+                {exporting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> PDF wird erstellt…
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 text-primary" /> Bericht als PDF
+                  </>
+                )}
+              </button>
+            </div>
+
             {result && (
               <>
                 {/* Overall summary card */}
@@ -373,6 +435,43 @@ export function WebsiteCheck() {
               </div>
             )}
 
+            {/* Extended audit */}
+            {extended && (
+              <>
+                <ExtendedSectionCard
+                  title="SEO-Detailanalyse"
+                  icon={Sparkles}
+                  score={extended.seo.score}
+                  rating={extended.seo.rating}
+                  items={extended.seo.items}
+                />
+                <ExtendedSectionCard
+                  title="Mobile & UX"
+                  icon={Smartphone}
+                  score={extended.mobile.score}
+                  rating={extended.mobile.rating}
+                  items={extended.mobile.items}
+                />
+                <ExtendedSectionCard
+                  title="Server-Performance"
+                  icon={Server}
+                  score={extended.perf.score}
+                  rating={extended.perf.rating}
+                  items={extended.perf.items}
+                  highlights={[
+                    { label: "TTFB", value: extended.perf.ttfbMs !== null ? `${extended.perf.ttfbMs} ms` : "—" },
+                    { label: "Externe Hosts", value: String(extended.perf.externalRequests) },
+                    { label: "HTML-Größe", value: `${extended.perf.htmlSizeKb} KB` },
+                  ]}
+                />
+              </>
+            )}
+            {extendedError && !extended && (
+              <div className="glass rounded-3xl p-6 flex items-center gap-3 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4" /> Detail-Analyse fehlgeschlagen: {extendedError}
+              </div>
+            )}
+
             {/* Screenshot */}
             {result?.screenshot && (
               <div className="glass rounded-3xl p-8">
@@ -420,16 +519,16 @@ const dsgvoIcons: Record<DsgvoFinding["key"], typeof Lock> = {
   headers: ScrollText,
 };
 
-function dsgvoColor(status: DsgvoStatus) {
+function statusToColor(status: DsgvoStatus | AuditStatus) {
   if (status === "ok") return "#22c55e";
   if (status === "warn") return "#f59e0b";
   return "#ef4444";
 }
 
-function DsgvoStatusIcon({ status }: { status: DsgvoStatus }) {
-  if (status === "ok") return <CheckCircle2 className="h-5 w-5" style={{ color: dsgvoColor(status) }} />;
-  if (status === "warn") return <AlertTriangle className="h-5 w-5" style={{ color: dsgvoColor(status) }} />;
-  return <XCircle className="h-5 w-5" style={{ color: dsgvoColor(status) }} />;
+function StatusIcon({ status }: { status: DsgvoStatus | AuditStatus }) {
+  if (status === "ok") return <CheckCircle2 className="h-5 w-5" style={{ color: statusToColor(status) }} />;
+  if (status === "warn") return <AlertTriangle className="h-5 w-5" style={{ color: statusToColor(status) }} />;
+  return <XCircle className="h-5 w-5" style={{ color: statusToColor(status) }} />;
 }
 
 function dsgvoSummary(score: number, findings: DsgvoFinding[]) {
@@ -449,7 +548,7 @@ function dsgvoSummary(score: number, findings: DsgvoFinding[]) {
 
 function DsgvoBlock({ data }: { data: DsgvoResult }) {
   const [open, setOpen] = useState<string | null>(null);
-  const color = dsgvoColor(
+  const color = statusToColor(
     data.score >= 90 ? "ok" : data.score >= 50 ? "warn" : "fail",
   );
 
@@ -489,14 +588,14 @@ function DsgvoBlock({ data }: { data: DsgvoResult }) {
               <div className="flex items-start gap-3">
                 <div
                   className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                  style={{ backgroundColor: `${dsgvoColor(f.status)}20`, color: dsgvoColor(f.status) }}
+                  style={{ backgroundColor: `${statusToColor(f.status)}20`, color: statusToColor(f.status) }}
                 >
                   <Icon className="h-5 w-5" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold">{f.label}</h3>
-                    <DsgvoStatusIcon status={f.status} />
+                    <StatusIcon status={f.status} />
                   </div>
                   <p className="text-sm text-muted-foreground mt-1">{f.summary}</p>
                 </div>
@@ -529,5 +628,77 @@ function DsgvoBlock({ data }: { data: DsgvoResult }) {
         Heuristische Analyse der Startseite — ersetzt keine rechtliche Prüfung durch einen Datenschutzbeauftragten.
       </p>
     </>
+  );
+}
+
+// ---------- Extended audit section ----------
+
+function ExtendedSectionCard({
+  title,
+  icon: Icon,
+  score,
+  rating,
+  items,
+  highlights,
+}: {
+  title: string;
+  icon: typeof Sparkles;
+  score: number;
+  rating: string;
+  items: AuditItem[];
+  highlights?: { label: string; value: string }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const color = statusToColor(score >= 90 ? "ok" : score >= 50 ? "warn" : "fail");
+
+  return (
+    <div className="glass rounded-3xl p-8">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
+        <div className="flex items-center gap-5">
+          <ScoreGauge value={score} color={color} size={96} />
+          <div>
+            <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-primary mb-1">
+              <Icon className="h-4 w-4" /> {title}
+            </div>
+            <div className="text-2xl font-bold font-display" style={{ color }}>
+              {rating}
+            </div>
+          </div>
+        </div>
+        {highlights && (
+          <div className="flex-1 grid grid-cols-3 gap-3 w-full lg:border-l lg:border-white/10 lg:pl-8">
+            {highlights.map((h) => (
+              <div key={h.label} className="rounded-2xl bg-white/[0.03] border border-white/5 p-4">
+                <div className="text-xs text-muted-foreground">{h.label}</div>
+                <div className="text-xl font-bold font-display mt-1">{h.value}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="mt-6 inline-flex items-center gap-1 text-xs text-primary hover:brightness-125 transition"
+      >
+        {open ? "Details ausblenden" : `${items.length} Checks anzeigen`}
+        <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <ul className="mt-4 space-y-2 border-t border-white/5 pt-4">
+          {items.map((i, idx) => (
+            <li key={idx} className="flex items-start gap-3 text-sm">
+              <StatusIcon status={i.status} />
+              <div className="flex-1 min-w-0">
+                <div className="font-medium">{i.label}</div>
+                <div className="text-xs text-muted-foreground break-words">{i.detail}</div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
