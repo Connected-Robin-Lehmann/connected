@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { Search, Loader2, Zap, Eye, ShieldCheck, Gauge as GaugeIcon, Smartphone, Monitor, AlertCircle, CheckCircle2, Clock, Image as ImageIcon } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  Search, Loader2, Zap, Eye, ShieldCheck, Gauge as GaugeIcon, Smartphone, Monitor,
+  AlertCircle, CheckCircle2, Clock, Image as ImageIcon, ShieldAlert, XCircle,
+  AlertTriangle, ChevronDown, Lock, Cookie, Globe, FileText, ScrollText,
+} from "lucide-react";
+import { checkDsgvo, type DsgvoResult, type DsgvoStatus, type DsgvoFinding } from "@/lib/dsgvo.functions";
 
 const API_KEY = "AIzaSyDuiRz2R4yNltsdDpEHiE6iPRm4KIFxoQ0";
 
@@ -141,6 +147,9 @@ export function WebsiteCheck() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CheckResult | null>(null);
+  const [dsgvo, setDsgvo] = useState<DsgvoResult | null>(null);
+  const [dsgvoError, setDsgvoError] = useState<string | null>(null);
+  const runDsgvo = useServerFn(checkDsgvo);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,16 +162,19 @@ export function WebsiteCheck() {
       return;
     }
     setError(null);
+    setDsgvoError(null);
     setLoading(true);
     setResult(null);
-    try {
-      const r = await fetchPagespeed(normalized, strategy);
-      setResult(r);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unbekannter Fehler");
-    } finally {
-      setLoading(false);
-    }
+    setDsgvo(null);
+    const [lh, dg] = await Promise.allSettled([
+      fetchPagespeed(normalized, strategy),
+      runDsgvo({ data: { url: normalized } }),
+    ]);
+    if (lh.status === "fulfilled") setResult(lh.value);
+    else setError(lh.reason instanceof Error ? lh.reason.message : "Lighthouse-Analyse fehlgeschlagen");
+    if (dg.status === "fulfilled") setDsgvo(dg.value);
+    else setDsgvoError(dg.reason instanceof Error ? dg.reason.message : "DSGVO-Analyse fehlgeschlagen");
+    setLoading(false);
   };
 
   const avg = result
@@ -281,76 +293,88 @@ export function WebsiteCheck() {
         {loading && (
           <div className="glass rounded-3xl p-12 text-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">Lighthouse-Analyse läuft – einen Moment bitte…</p>
+            <p className="text-muted-foreground">Lighthouse- & DSGVO-Analyse laufen – einen Moment bitte…</p>
           </div>
         )}
 
-        {result && !loading && (
+        {(result || dsgvo || dsgvoError) && !loading && (
           <div className="space-y-6 animate-fade-up">
-            {/* Overall summary card */}
-            <div className="glass rounded-3xl p-8 md:p-10">
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div className="flex items-center gap-6">
-                  <ScoreGauge value={avg} color={scoreColor(avg)} size={120} />
-                  <div>
-                    <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-1">
-                      Gesamteinstufung
+            {result && (
+              <>
+                {/* Overall summary card */}
+                <div className="glass rounded-3xl p-8 md:p-10">
+                  <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
+                    <div className="flex items-center gap-6">
+                      <ScoreGauge value={avg} color={scoreColor(avg)} size={120} />
+                      <div>
+                        <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                          Gesamteinstufung Performance
+                        </div>
+                        <div className="text-3xl font-bold font-display" style={{ color: scoreColor(avg) }}>
+                          {scoreLabel(avg)}
+                        </div>
+                        <div className="text-sm text-muted-foreground mt-1 break-all">{result.url}</div>
+                      </div>
                     </div>
-                    <div className="text-3xl font-bold font-display" style={{ color: scoreColor(avg) }}>
-                      {scoreLabel(avg)}
+                    <div className="flex-1 md:border-l md:border-white/10 md:pl-8">
+                      <div className="flex items-center gap-2 text-sm uppercase tracking-[0.2em] text-primary mb-3">
+                        <CheckCircle2 className="h-4 w-4" /> Zusammenfassung
+                      </div>
+                      <p className="text-muted-foreground leading-relaxed">{summary}</p>
                     </div>
-                    <div className="text-sm text-muted-foreground mt-1 break-all">{result.url}</div>
                   </div>
                 </div>
-                <div className="flex-1 md:border-l md:border-white/10 md:pl-8">
-                  <div className="flex items-center gap-2 text-sm uppercase tracking-[0.2em] text-primary mb-3">
-                    <CheckCircle2 className="h-4 w-4" /> Zusammenfassung
-                  </div>
-                  <p className="text-muted-foreground leading-relaxed">{summary}</p>
+
+                {/* Category scores */}
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {categoryConfig.map((c) => {
+                    const v = result.scores[c.key];
+                    return (
+                      <div key={c.key} className="glass rounded-3xl p-6 text-center">
+                        <ScoreGauge value={v} color={scoreColor(v)} />
+                        <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary mt-4 mb-2">
+                          <c.icon className="h-4 w-4" />
+                        </div>
+                        <h3 className="font-bold">{c.label}</h3>
+                        <div className="text-xs text-muted-foreground mt-1" style={{ color: scoreColor(v) }}>
+                          {scoreLabel(v)}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              </div>
-            </div>
 
-            {/* Category scores */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {categoryConfig.map((c) => {
-                const v = result.scores[c.key];
-                return (
-                  <div key={c.key} className="glass rounded-3xl p-6 text-center">
-                    <ScoreGauge value={v} color={scoreColor(v)} />
-                    <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary mt-4 mb-2">
-                      <c.icon className="h-4 w-4" />
-                    </div>
-                    <h3 className="font-bold">{c.label}</h3>
-                    <div className="text-xs text-muted-foreground mt-1" style={{ color: scoreColor(v) }}>
-                      {scoreLabel(v)}
-                    </div>
+                {/* Core web vitals */}
+                <div className="glass rounded-3xl p-8">
+                  <div className="flex items-center gap-2 text-sm uppercase tracking-[0.2em] text-primary mb-6">
+                    <Clock className="h-4 w-4" /> Core Web Vitals & Metriken
                   </div>
-                );
-              })}
-            </div>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {metricConfig.map((m) => {
+                      const v = result.metrics[m.key];
+                      return (
+                        <div key={m.key} className="rounded-2xl bg-white/[0.03] border border-white/5 p-5">
+                          <div className="text-xs text-muted-foreground">{m.label}</div>
+                          <div className="text-2xl font-bold font-display mt-1">{v ?? "—"}</div>
+                          <div className="text-xs text-muted-foreground mt-1">{m.hint}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
 
-            {/* Core web vitals */}
-            <div className="glass rounded-3xl p-8">
-              <div className="flex items-center gap-2 text-sm uppercase tracking-[0.2em] text-primary mb-6">
-                <Clock className="h-4 w-4" /> Core Web Vitals & Metriken
+            {/* DSGVO block */}
+            {dsgvo && <DsgvoBlock data={dsgvo} />}
+            {dsgvoError && !dsgvo && (
+              <div className="glass rounded-3xl p-6 flex items-center gap-3 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4" /> DSGVO-Analyse fehlgeschlagen: {dsgvoError}
               </div>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {metricConfig.map((m) => {
-                  const v = result.metrics[m.key];
-                  return (
-                    <div key={m.key} className="rounded-2xl bg-white/[0.03] border border-white/5 p-5">
-                      <div className="text-xs text-muted-foreground">{m.label}</div>
-                      <div className="text-2xl font-bold font-display mt-1">{v ?? "—"}</div>
-                      <div className="text-xs text-muted-foreground mt-1">{m.hint}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            )}
 
             {/* Screenshot */}
-            {result.screenshot && (
+            {result?.screenshot && (
               <div className="glass rounded-3xl p-8">
                 <div className="flex items-center gap-2 text-sm uppercase tracking-[0.2em] text-primary mb-6">
                   <ImageIcon className="h-4 w-4" /> Vorschau der analysierten Seite
@@ -369,7 +393,7 @@ export function WebsiteCheck() {
             <div className="glass rounded-3xl p-8 text-center">
               <h3 className="text-2xl font-bold mb-2">Nicht zufrieden mit dem Ergebnis?</h3>
               <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
-                Ich helfe Ihnen, Ihre Website auf 90+ in allen Kategorien zu bringen — schnell, modern und persönlich betreut.
+                Ich helfe Ihnen, Ihre Website auf 90+ in allen Kategorien zu bringen und DSGVO-konform aufzustellen — schnell, modern und persönlich betreut.
               </p>
               <a
                 href="/contact"
@@ -382,5 +406,128 @@ export function WebsiteCheck() {
         )}
       </div>
     </section>
+  );
+}
+
+// ---------- DSGVO sub-component ----------
+
+const dsgvoIcons: Record<DsgvoFinding["key"], typeof Lock> = {
+  https: Lock,
+  cookies: Cookie,
+  external: Globe,
+  trackers: ShieldAlert,
+  legal: FileText,
+  headers: ScrollText,
+};
+
+function dsgvoColor(status: DsgvoStatus) {
+  if (status === "ok") return "#22c55e";
+  if (status === "warn") return "#f59e0b";
+  return "#ef4444";
+}
+
+function DsgvoStatusIcon({ status }: { status: DsgvoStatus }) {
+  if (status === "ok") return <CheckCircle2 className="h-5 w-5" style={{ color: dsgvoColor(status) }} />;
+  if (status === "warn") return <AlertTriangle className="h-5 w-5" style={{ color: dsgvoColor(status) }} />;
+  return <XCircle className="h-5 w-5" style={{ color: dsgvoColor(status) }} />;
+}
+
+function dsgvoSummary(score: number, findings: DsgvoFinding[]) {
+  const fails = findings.filter((f) => f.status === "fail").map((f) => f.label);
+  const warns = findings.filter((f) => f.status === "warn").map((f) => f.label);
+  if (score >= 90) {
+    return "Die Seite erfüllt die wichtigsten DSGVO-Grundlagen sehr gut. Nur kleinere Punkte sind noch zu optimieren.";
+  }
+  if (score >= 70) {
+    return `Solide DSGVO-Grundlage mit Verbesserungsbedarf${warns.length ? ` bei: ${warns.join(", ")}` : ""}.`;
+  }
+  if (score >= 50) {
+    return `Mehrere DSGVO-Schwachstellen erkannt${fails.length ? ` (kritisch: ${fails.join(", ")})` : ""}. Eine Überarbeitung wird empfohlen.`;
+  }
+  return `Erhebliche DSGVO-Risiken${fails.length ? ` in: ${fails.join(", ")}` : ""}. Dringender Handlungsbedarf.`;
+}
+
+function DsgvoBlock({ data }: { data: DsgvoResult }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const color = dsgvoColor(
+    data.score >= 90 ? "ok" : data.score >= 50 ? "warn" : "fail",
+  );
+
+  return (
+    <>
+      <div className="glass rounded-3xl p-8 md:p-10">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
+          <div className="flex items-center gap-6">
+            <ScoreGauge value={data.score} color={color} size={120} />
+            <div>
+              <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                DSGVO-Einstufung
+              </div>
+              <div className="text-3xl font-bold font-display" style={{ color }}>
+                {data.rating}
+              </div>
+              <div className="text-sm text-muted-foreground mt-1 break-all">{data.finalUrl}</div>
+            </div>
+          </div>
+          <div className="flex-1 md:border-l md:border-white/10 md:pl-8">
+            <div className="flex items-center gap-2 text-sm uppercase tracking-[0.2em] text-primary mb-3">
+              <ShieldAlert className="h-4 w-4" /> DSGVO-Zusammenfassung
+            </div>
+            <p className="text-muted-foreground leading-relaxed">
+              {dsgvoSummary(data.score, data.findings)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {data.findings.map((f) => {
+          const Icon = dsgvoIcons[f.key];
+          const isOpen = open === f.key;
+          return (
+            <div key={f.key} className="glass rounded-3xl p-6 flex flex-col">
+              <div className="flex items-start gap-3">
+                <div
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                  style={{ backgroundColor: `${dsgvoColor(f.status)}20`, color: dsgvoColor(f.status) }}
+                >
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold">{f.label}</h3>
+                    <DsgvoStatusIcon status={f.status} />
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">{f.summary}</p>
+                </div>
+              </div>
+              {f.details.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setOpen(isOpen ? null : f.key)}
+                    className="mt-4 inline-flex items-center gap-1 text-xs text-primary hover:brightness-125 transition self-start"
+                  >
+                    {isOpen ? "Weniger" : "Details"}
+                    <ChevronDown className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {isOpen && (
+                    <ul className="mt-3 space-y-1.5 text-xs text-muted-foreground border-t border-white/5 pt-3">
+                      {f.details.map((d, i) => (
+                        <li key={i} className="break-words">• {d}</li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="text-xs text-muted-foreground text-center px-4">
+        Heuristische Analyse der Startseite — ersetzt keine rechtliche Prüfung durch einen Datenschutzbeauftragten.
+      </p>
+    </>
   );
 }
