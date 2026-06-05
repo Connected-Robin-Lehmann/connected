@@ -1,6 +1,6 @@
 import { ArrowUpRight, Quote } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import tennis from "@/assets/tennisclub.jpg";
+import tennis from "@/assets/tennisclub.png";
 
 export function Portfolio({ compact = false }: { compact?: boolean }) {
   return (
