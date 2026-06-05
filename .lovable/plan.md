@@ -1,54 +1,99 @@
-# DSGVO-Check für den Website-Check
+## Ziel
 
-Erweitert den bestehenden `WebsiteCheck` um eine zweite, serverseitig laufende Analyse. Eine URL, beide Analysen (Lighthouse + DSGVO) laufen parallel, Ergebnis erscheint im selben Bereich.
+Den bestehenden Website-Check auf der Startseite um drei Metrik-Pakete erweitern und einen PDF-Export-Button hinzufügen, der einen professionellen, gebrandeten Bericht erzeugt.
 
-## Was geprüft wird
+## 1. Zusätzliche Metriken (serverseitig)
 
-| Kategorie | Methode |
-|---|---|
-| **HTTPS / SSL** | Antwortet `https://`? Wird `http://` automatisch weitergeleitet? Gültiges Zertifikat (kein Fetch-Fehler)? |
-| **Cookies beim Laden** | `Set-Cookie`-Header der Initialantwort parsen — Anzahl Cookies, Namen, `Secure`/`HttpOnly`/`SameSite`. Bekannte Tracker-Cookie-Namen markieren (`_ga`, `_fbp`, `_gid`, `_hjSession*`, …). |
-| **Externe Ressourcen** | HTML parsen, alle `<script src>`, `<link href>`, `<img src>`, `<iframe src>` extrahieren. Hosts gegen Allowlist (eigene Domain) und Risk-Liste matchen: Google Fonts, Google Analytics/Tag Manager, Facebook, YouTube, Google Maps, Hotjar, Cloudflare Insights, etc. |
-| **Tracker-Skripte** | Script-URLs gegen bekannte Tracker-Patterns matchen (`google-analytics.com`, `googletagmanager.com`, `connect.facebook.net`, `hotjar.com`, `clarity.ms`, `matomo`, …). |
-| **Impressum & Datenschutz** | Im HTML nach Links suchen, deren Text oder `href` `impressum`, `datenschutz`, `privacy`, `legal` enthält. |
-| **Security-Header (Bonus)** | `Strict-Transport-Security`, `X-Content-Type-Options`, `Content-Security-Policy`, `Referrer-Policy` — kurz angezeigt. |
+Neue Server Function `extendedAudit` in `src/lib/extended-audit.functions.ts`, läuft parallel zu Lighthouse + DSGVO.
 
-Pro Kategorie ein Status: **OK / Warnung / Problem**, plus Detailliste. Daraus wird ein Gesamt-Score (0–100) und eine Texteinstufung berechnet, analog zum Lighthouse-Block.
+### 1a. SEO-Tiefe (aus dem geladenen HTML, linkedom)
+- `<title>` vorhanden + Länge (Soll 30–60)
+- `<meta name="description">` vorhanden + Länge (Soll 70–160)
+- `<html lang="…">` gesetzt
+- Anzahl h1/h2/h3 (genau ein h1?)
+- Open Graph (og:title, og:description, og:image)
+- Twitter Card
+- `<link rel="canonical">`
+- JSON-LD strukturierte Daten (Typen auflisten)
+- Bilder ohne `alt` (Anzahl von Gesamt)
+- `robots.txt` per HEAD erreichbar
+- `sitemap.xml` per HEAD erreichbar
 
-## Architektur
+### 1b. Mobile/UX
+- `<meta name="viewport">` vorhanden + sinnvoll konfiguriert
+- Favicon vorhanden (`<link rel="icon">` oder `/favicon.ico`)
+- HTML-Dokumentgröße in KB
 
-**Neue Server Function** `src/lib/dsgvo.functions.ts`:
-- `createServerFn({ method: "POST" })` mit Zod-validierter URL (max. 500 Zeichen, muss `http(s)`-Schema haben).
-- SSRF-Schutz: DNS-Auflösung blockieren für private IP-Bereiche (`127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, `::1`, `fc00::/7`). Nur `http`/`https` erlauben.
-- Timeout 15 s via `AbortController`.
-- User-Agent: `ConnectedWebsiteCheck/1.0 (+https://…)` damit Seiten den Bot identifizieren können.
-- Schritte:
-  1. `fetch(url)` mit `redirect: "manual"` → HTTPS-Weiterleitung prüfen.
-  2. `fetch(url, { redirect: "follow" })` → finale Antwort, Header & HTML.
-  3. HTML mit `linkedom` parsen (leichtgewichtig, Worker-kompatibel) — falls Bundle-Größe ein Problem ist, Fallback auf Regex für `<script>`/`<link>`/`<a>`.
-  4. Cookies aus `Set-Cookie` extrahieren (Worker-API: `response.headers.getSetCookie()`).
-  5. Externe Hosts gegen Tracker-Mapping prüfen.
-  6. Score & Findings zusammenstellen, plain DTO zurückgeben.
+### 1c. Performance-Zusatz
+- TTFB in ms (eigene Messung via `performance.now()`)
+- Anzahl externer Requests (Script/Link/Img mit fremdem Host, aus HTML)
 
-**Frontend-Erweiterung** in `src/components/site/WebsiteCheck.tsx`:
-- Submit ruft Lighthouse **und** DSGVO-Server-Function parallel via `Promise.allSettled`. Jede Sektion hat eigenen Loading-/Error-State (eine kann fehlschlagen, ohne die andere zu blocken).
-- Neuer Ergebnis-Block direkt unter der Lighthouse-Zusammenfassung:
-  - Gesamt-Gauge + Texteinstufung im gleichen Stil wie bisher (`glass`, gleicher Score-Farbcode).
-  - Grid mit 6 Karten (eine pro Kategorie), Status-Icon (`CheckCircle2` / `AlertTriangle` / `XCircle`), kurzer Befund.
-  - Aufklappbare Detail-Liste pro Karte (z. B. „3 externe Hosts gefunden: fonts.googleapis.com, …").
-- Reihenfolge im Ergebnis: Lighthouse-Karte → Lighthouse-Kategorien → Core Web Vitals → **DSGVO-Karte** → **DSGVO-Details** → Screenshot → CTA.
+### Rückgabe-Shape
+```ts
+{
+  seo:    { items: Array<{label, status, detail}>, score: number },
+  mobile: { items: [...], score: number },
+  perf:   { ttfbMs, externalRequests, items: [...], score: number },
+}
+```
+Status-Schema identisch zu DSGVO (`ok | warn | fail`), damit die UI-Komponente wiederverwendbar bleibt.
 
-## Design
+## 2. Frontend-Integration
 
-Bestehende Token & Klassen wiederverwenden: `glass`-Karten, `scoreColor`-Funktion aus der Datei, Gauge-Komponente, Primary-Farbtöne. Keine neuen Farben, keine neuen Schriften.
+`src/components/site/WebsiteCheck.tsx`:
+- `Promise.allSettled` erweitern auf 3 Calls (Lighthouse, DSGVO, ExtendedAudit)
+- Drei neue Card-Blöcke unterhalb des DSGVO-Blocks, gleicher `glass`-Stil, Gauge + ausklappbare Details:
+  1. SEO-Detail-Analyse
+  2. Mobile & UX
+  3. Server-Performance (TTFB + externe Requests prominent)
+- Wiederverwendbare interne Sub-Komponente `MetricCard` extrahieren (DSGVO-Block damit ebenfalls refactoren), kein doppelter Code.
+- Loading-Text: „Lighthouse-, DSGVO- & Detail-Analyse laufen…"
 
-## Disclaimer
+## 3. PDF-Export (Vektor, jsPDF + autotable)
 
-Unter dem DSGVO-Block kleiner Hinweis: *„Heuristische Analyse, ersetzt keine rechtliche Prüfung. Geprüft wird nur die Startseite ohne Interaktion."*
+### Dependencies
+`bun add jspdf jspdf-autotable` (lazy-loaded beim Button-Klick → kein Einfluss auf Initial-Bundle der Startseite)
+
+### Neue Datei `src/lib/report-pdf.ts`
+Reine Client-Funktion `exportReport(payload)`, generiert A4-PDF:
+
+**Struktur:**
+1. **Deckblatt** — Connected-Wortmarke + Akzentbalken, Titel „Website-Analyse", URL, Datum, Strategie, Gesamtscore + DSGVO-Score als gezeichnete Kreise, 3–5-Zeilen-Zusammenfassung
+2. **Lighthouse-Scores** — autotable (Kategorie | Score | Bewertung), Zeilen farblich nach Score
+3. **Core Web Vitals** — autotable (Metrik | Wert | Bedeutung)
+4. **DSGVO-Detailanalyse** — pro Finding Block mit Status-Farbcode + Detail-Bullets
+5. **SEO / Mobile / Server-Performance** — analog
+6. **Screenshot-Seite** — `result.screenshot` (Base64) via `doc.addImage`
+7. **Empfehlungen** — automatisch aus allen Findings ≠ ok, gruppiert nach Bereich, 1-Satz-Handlungsempfehlung je Punkt (Mapping-Tabelle)
+8. **Footer auf jeder Seite** — „Connected Webdesign — Robin Lehmann", Kontakt (E-Mail/Tel/URL), Seitenzahl, Generierungs-Datum
+9. **Kontakt-CTA letzte Seite** — Karte mit Akzentfarbe, Hinweis „heuristische Analyse, keine Rechtsberatung"
+
+### Farben & Design
+- Aus dem Design-System abgeleitet, in PDF-tauglichem RGB hartcodiert (jsPDF kann kein oklch)
+- Score-Farben: gleiche Schwellwerte wie UI (≥90 grün, ≥50 gelb, sonst rot)
+- Hintergrund weiß (druckfreundlich), Akzentstreifen in Primary
+
+### Button
+- Oben rechts im Ergebnis-Bereich, `glass` Pill-Button mit Download-Icon
+- Disabled solange nicht alle drei Analysen abgeschlossen sind
+- Dateiname: `website-check-{hostname}-{YYYY-MM-DD}.pdf`
+
+## Technische Details
+- **SSRF-Schutz / Timeout / User-Agent**: gemeinsame Helper aus `dsgvo.functions.ts` in `src/lib/url-fetch.server.ts` extrahieren, beide Server Functions importieren sie.
+- **TypeScript-Typen** aller Results exportieren, damit der PDF-Generator typsicher ist.
+- **linkedom** ist bereits Dependency — keine neue für SEO/Mobile.
+- **Bundle**: jspdf+autotable ~250 KB, via dynamischem `import()` lazy beim Klick geladen.
 
 ## Out of Scope
+- Keine Unterseiten-Analyse
+- Kein Speichern der Ergebnisse in einer Datenbank
+- Keine E-Mail-Zustellung des PDFs (nur Download)
+- Nur Deutsch
 
-- Subseiten-Crawling (nur die eingegebene URL wird geladen).
-- Cookie-Banner-Erkennung mit echter Interaktion (würde Headless Browser brauchen).
-- Speicherung von Ergebnissen — alles läuft on-demand, kein DB-Eintrag.
-- Rate-Limiting auf der Server Function (kann später ergänzt werden, falls Missbrauch auftritt).
+## Geänderte / neue Dateien
+- neu: `src/lib/url-fetch.server.ts`
+- neu: `src/lib/extended-audit.functions.ts`
+- neu: `src/lib/report-pdf.ts`
+- bearbeitet: `src/lib/dsgvo.functions.ts` (Helper extrahieren)
+- bearbeitet: `src/components/site/WebsiteCheck.tsx` (3 Card-Blöcke, Export-Button, MetricCard-Refactor)
+- bearbeitet: `package.json` / `bun.lock` (jspdf, jspdf-autotable)
