@@ -293,7 +293,7 @@ export function WebsiteCheck() {
         {loading && (
           <div className="glass rounded-3xl p-12 text-center">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">Lighthouse-Analyse läuft – einen Moment bitte…</p>
+            <p className="text-muted-foreground">Lighthouse- & DSGVO-Analyse laufen – einen Moment bitte…</p>
           </div>
         )}
 
