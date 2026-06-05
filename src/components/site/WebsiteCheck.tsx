@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { Search, Loader2, Zap, Eye, ShieldCheck, Gauge as GaugeIcon, Smartphone, Monitor, AlertCircle, CheckCircle2, Clock, Image as ImageIcon } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  Search, Loader2, Zap, Eye, ShieldCheck, Gauge as GaugeIcon, Smartphone, Monitor,
+  AlertCircle, CheckCircle2, Clock, Image as ImageIcon, ShieldAlert, XCircle,
+  AlertTriangle, ChevronDown, Lock, Cookie, Globe, FileText, ScrollText,
+} from "lucide-react";
+import { checkDsgvo, type DsgvoResult, type DsgvoStatus, type DsgvoFinding } from "@/lib/dsgvo.functions";
 
 const API_KEY = "AIzaSyDuiRz2R4yNltsdDpEHiE6iPRm4KIFxoQ0";
 
