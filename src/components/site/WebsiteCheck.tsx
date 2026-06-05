@@ -147,6 +147,9 @@ export function WebsiteCheck() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<CheckResult | null>(null);
+  const [dsgvo, setDsgvo] = useState<DsgvoResult | null>(null);
+  const [dsgvoError, setDsgvoError] = useState<string | null>(null);
+  const runDsgvo = useServerFn(checkDsgvo);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,16 +162,19 @@ export function WebsiteCheck() {
       return;
     }
     setError(null);
+    setDsgvoError(null);
     setLoading(true);
     setResult(null);
-    try {
-      const r = await fetchPagespeed(normalized, strategy);
-      setResult(r);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unbekannter Fehler");
-    } finally {
-      setLoading(false);
-    }
+    setDsgvo(null);
+    const [lh, dg] = await Promise.allSettled([
+      fetchPagespeed(normalized, strategy),
+      runDsgvo({ data: { url: normalized } }),
+    ]);
+    if (lh.status === "fulfilled") setResult(lh.value);
+    else setError(lh.reason instanceof Error ? lh.reason.message : "Lighthouse-Analyse fehlgeschlagen");
+    if (dg.status === "fulfilled") setDsgvo(dg.value);
+    else setDsgvoError(dg.reason instanceof Error ? dg.reason.message : "DSGVO-Analyse fehlgeschlagen");
+    setLoading(false);
   };
 
   const avg = result
