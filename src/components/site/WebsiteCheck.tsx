@@ -408,3 +408,126 @@ export function WebsiteCheck() {
     </section>
   );
 }
+
+// ---------- DSGVO sub-component ----------
+
+const dsgvoIcons: Record<DsgvoFinding["key"], typeof Lock> = {
+  https: Lock,
+  cookies: Cookie,
+  external: Globe,
+  trackers: ShieldAlert,
+  legal: FileText,
+  headers: ScrollText,
+};
+
+function dsgvoColor(status: DsgvoStatus) {
+  if (status === "ok") return "#22c55e";
+  if (status === "warn") return "#f59e0b";
+  return "#ef4444";
+}
+
+function DsgvoStatusIcon({ status }: { status: DsgvoStatus }) {
+  if (status === "ok") return <CheckCircle2 className="h-5 w-5" style={{ color: dsgvoColor(status) }} />;
+  if (status === "warn") return <AlertTriangle className="h-5 w-5" style={{ color: dsgvoColor(status) }} />;
+  return <XCircle className="h-5 w-5" style={{ color: dsgvoColor(status) }} />;
+}
+
+function dsgvoSummary(score: number, findings: DsgvoFinding[]) {
+  const fails = findings.filter((f) => f.status === "fail").map((f) => f.label);
+  const warns = findings.filter((f) => f.status === "warn").map((f) => f.label);
+  if (score >= 90) {
+    return "Die Seite erfüllt die wichtigsten DSGVO-Grundlagen sehr gut. Nur kleinere Punkte sind noch zu optimieren.";
+  }
+  if (score >= 70) {
+    return `Solide DSGVO-Grundlage mit Verbesserungsbedarf${warns.length ? ` bei: ${warns.join(", ")}` : ""}.`;
+  }
+  if (score >= 50) {
+    return `Mehrere DSGVO-Schwachstellen erkannt${fails.length ? ` (kritisch: ${fails.join(", ")})` : ""}. Eine Überarbeitung wird empfohlen.`;
+  }
+  return `Erhebliche DSGVO-Risiken${fails.length ? ` in: ${fails.join(", ")}` : ""}. Dringender Handlungsbedarf.`;
+}
+
+function DsgvoBlock({ data }: { data: DsgvoResult }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const color = dsgvoColor(
+    data.score >= 90 ? "ok" : data.score >= 50 ? "warn" : "fail",
+  );
+
+  return (
+    <>
+      <div className="glass rounded-3xl p-8 md:p-10">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-8">
+          <div className="flex items-center gap-6">
+            <ScoreGauge value={data.score} color={color} size={120} />
+            <div>
+              <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground mb-1">
+                DSGVO-Einstufung
+              </div>
+              <div className="text-3xl font-bold font-display" style={{ color }}>
+                {data.rating}
+              </div>
+              <div className="text-sm text-muted-foreground mt-1 break-all">{data.finalUrl}</div>
+            </div>
+          </div>
+          <div className="flex-1 md:border-l md:border-white/10 md:pl-8">
+            <div className="flex items-center gap-2 text-sm uppercase tracking-[0.2em] text-primary mb-3">
+              <ShieldAlert className="h-4 w-4" /> DSGVO-Zusammenfassung
+            </div>
+            <p className="text-muted-foreground leading-relaxed">
+              {dsgvoSummary(data.score, data.findings)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {data.findings.map((f) => {
+          const Icon = dsgvoIcons[f.key];
+          const isOpen = open === f.key;
+          return (
+            <div key={f.key} className="glass rounded-3xl p-6 flex flex-col">
+              <div className="flex items-start gap-3">
+                <div
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                  style={{ backgroundColor: `${dsgvoColor(f.status)}20`, color: dsgvoColor(f.status) }}
+                >
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold">{f.label}</h3>
+                    <DsgvoStatusIcon status={f.status} />
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">{f.summary}</p>
+                </div>
+              </div>
+              {f.details.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setOpen(isOpen ? null : f.key)}
+                    className="mt-4 inline-flex items-center gap-1 text-xs text-primary hover:brightness-125 transition self-start"
+                  >
+                    {isOpen ? "Weniger" : "Details"}
+                    <ChevronDown className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {isOpen && (
+                    <ul className="mt-3 space-y-1.5 text-xs text-muted-foreground border-t border-white/5 pt-3">
+                      {f.details.map((d, i) => (
+                        <li key={i} className="break-words">• {d}</li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="text-xs text-muted-foreground text-center px-4">
+        Heuristische Analyse der Startseite — ersetzt keine rechtliche Prüfung durch einen Datenschutzbeauftragten.
+      </p>
+    </>
+  );
+}
