@@ -5,6 +5,7 @@ import { Services } from "@/components/site/Services";
 import { Portfolio } from "@/components/site/Portfolio";
 import { Process } from "@/components/site/Process";
 import { Contact } from "@/components/site/Contact";
+import { WebsiteCheck } from "@/components/site/WebsiteCheck";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -29,6 +30,7 @@ function Index() {
   return (
     <main>
       <Hero />
+      <WebsiteCheck />
       <Services compact />
       <About compact />
       <Portfolio compact />
