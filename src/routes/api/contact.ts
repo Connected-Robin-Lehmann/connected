@@ -3,7 +3,7 @@ import { z } from "zod";
 
 const TO_EMAIL = "robin.lehmann@connected-webdesign.de";
 const FROM_EMAIL = "Connected <kontakt@connected-webdesign.de>";
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
+const RESEND_URL = "https://api.resend.com";
 
 const schema = z.object({
   name: z.string().trim().min(1).max(100),
@@ -73,12 +73,11 @@ function userText(d: z.infer<typeof schema>) {
 }
 
 async function sendMail(payload: Record<string, unknown>) {
-  const res = await fetch(`${GATEWAY_URL}/emails`, {
+  const res = await fetch(`${RESEND_URL}/emails`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": process.env.RESEND_API_KEY!,
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
     },
     body: JSON.stringify(payload),
   });
@@ -114,7 +113,7 @@ export const Route = createFileRoute("/api/contact")({
           return Response.json({ ok: true });
         }
 
-        if (!process.env.LOVABLE_API_KEY || !process.env.RESEND_API_KEY) {
+        if (!process.env.RESEND_API_KEY) {
           return Response.json({ ok: false, error: "not_configured" }, { status: 500 });
         }
 
