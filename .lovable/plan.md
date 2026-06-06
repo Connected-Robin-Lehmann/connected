@@ -1,99 +1,76 @@
 ## Ziel
+Alle SEO/Meta-Punkte aus dem Pre-Launch-Check umsetzen: vollständige Per-Route-Metadaten, canonical & og:url, OG-Bild, JSON-LD (Organization + LocalBusiness + WebSite + BreadcrumbList), sitemap.xml, robots.txt, Web-Manifest und Favicon-Setup.
 
-Den bestehenden Website-Check auf der Startseite um drei Metrik-Pakete erweitern und einen PDF-Export-Button hinzufügen, der einen professionellen, gebrandeten Bericht erzeugt.
+## 1. OG-Image (gebrandet, 1200×630)
+- Erzeugung via `imagegen` (premium, da Text), Datei `src/assets/og-image.jpg`
+- Motiv: dunkler Hintergrund mit Primary-Akzent, Wortmarke „Connected." groß, Subline „Webdesign & Webentwicklung aus Heidelberg", dezenter Code-/Browser-Hint
+- Import als ES6-Asset, URL via Vite-Import in `og:image`/`twitter:image` (absolut zur Origin gebaut, siehe Punkt 6)
 
-## 1. Zusätzliche Metriken (serverseitig)
+## 2. Per-Route head() vervollständigen
+Für jede Route (`/`, `/about`, `/services`, `/references`, `/contact`, `/impressum`, `/datenschutz`):
+- `title`, `description`, `og:title`, `og:description` (bereits vorhanden, leicht geschärft)
+- **neu**: `og:url` (relativer Pfad), `og:image`, `twitter:image`, `twitter:card: summary_large_image`, `og:locale: de_DE`
+- **neu**: `<link rel="canonical">` in `links` (nur Leaf-Routes, relativ)
+- `/impressum` und `/datenschutz` bekommen zusätzlich `robots: noindex,follow` (rechtliche Seiten gehören nicht in Suchergebnisse, sind aber crawlbar)
 
-Neue Server Function `extendedAudit` in `src/lib/extended-audit.functions.ts`, läuft parallel zu Lighthouse + DSGVO.
+## 3. Root-Head bereinigen & sitewide Defaults setzen (`src/routes/__root.tsx`)
+- `og:site_name: "Connected"` + `og:locale: de_DE` ergänzen
+- `twitter:card` von `summary` auf `summary_large_image` heben
+- `og:image` **nicht** in Root setzen (würde Leaf-Bilder überschreiben — laut head-meta-Regel)
+- Canonical NICHT in Root (Dedupe-Caveat)
+- Favicon-/Manifest-Links ergänzen: `icon`, `apple-touch-icon`, `manifest`, `theme-color`
+- JSON-LD-Scripts (siehe Punkt 4) im Root via `scripts`-Array
 
-### 1a. SEO-Tiefe (aus dem geladenen HTML, linkedom)
-- `<title>` vorhanden + Länge (Soll 30–60)
-- `<meta name="description">` vorhanden + Länge (Soll 70–160)
-- `<html lang="…">` gesetzt
-- Anzahl h1/h2/h3 (genau ein h1?)
-- Open Graph (og:title, og:description, og:image)
-- Twitter Card
-- `<link rel="canonical">`
-- JSON-LD strukturierte Daten (Typen auflisten)
-- Bilder ohne `alt` (Anzahl von Gesamt)
-- `robots.txt` per HEAD erreichbar
-- `sitemap.xml` per HEAD erreichbar
+## 4. JSON-LD strukturierte Daten
+- **Root**: `Organization` + `WebSite` (mit `potentialAction` für Sitelinks-Searchbox auf später vorbereitet, hier weglassen da keine interne Suche)
+- **Root zusätzlich**: `LocalBusiness` (Subtyp `ProfessionalService`) — Name, Inhaber, Adresse (Dürerstraße 10, 69126 Heidelberg), E-Mail, `areaServed: Heidelberg/Rhein-Neckar`, `serviceType`, `url`
+- **/services**: `Service`-Array (Webdesign, Webentwicklung, Wartung) mit `provider`-Referenz
+- **/contact**: `ContactPage` + `ContactPoint`
+- **Deep-Routes** (`/about`, `/services`, `/references`, `/contact`, `/impressum`, `/datenschutz`): `BreadcrumbList` (Start → Seite)
 
-### 1b. Mobile/UX
-- `<meta name="viewport">` vorhanden + sinnvoll konfiguriert
-- Favicon vorhanden (`<link rel="icon">` oder `/favicon.ico`)
-- HTML-Dokumentgröße in KB
+## 5. sitemap.xml (Server-Route)
+- Neu: `src/routes/sitemap[.]xml.ts` mit `BASE_URL = ""` (TODO-Kommentar bleibt, da noch keine Custom-Domain)
+- Entries: `/`, `/about`, `/services`, `/references`, `/contact` (rechtliche Seiten weglassen, da noindex)
+- Priorities/changefreq sinnvoll gesetzt
 
-### 1c. Performance-Zusatz
-- TTFB in ms (eigene Messung via `performance.now()`)
-- Anzahl externer Requests (Script/Link/Img mit fremdem Host, aus HTML)
+## 6. robots.txt
+- Neu: `public/robots.txt` mit `User-agent: *` / `Allow: /` — kein `Sitemap:`-Eintrag, solange keine Custom-Domain (laut sitemap-robots-Regel)
 
-### Rückgabe-Shape
-```ts
-{
-  seo:    { items: Array<{label, status, detail}>, score: number },
-  mobile: { items: [...], score: number },
-  perf:   { ttfbMs, externalRequests, items: [...], score: number },
-}
-```
-Status-Schema identisch zu DSGVO (`ok | warn | fail`), damit die UI-Komponente wiederverwendbar bleibt.
+## 7. Favicon & Web-Manifest
+- `public/favicon.svg` — minimaler Primary-Punkt im „Connected." Stil (SVG, schnell)
+- `public/apple-touch-icon.png` — 180×180 (Primary-Hintergrund mit weißem Punkt, via imagegen fast)
+- `public/site.webmanifest` mit `name`, `short_name`, `theme_color`, `background_color`, Icon-Referenzen
+- Verlinkung in `__root.tsx` (`links`)
 
-## 2. Frontend-Integration
-
-`src/components/site/WebsiteCheck.tsx`:
-- `Promise.allSettled` erweitern auf 3 Calls (Lighthouse, DSGVO, ExtendedAudit)
-- Drei neue Card-Blöcke unterhalb des DSGVO-Blocks, gleicher `glass`-Stil, Gauge + ausklappbare Details:
-  1. SEO-Detail-Analyse
-  2. Mobile & UX
-  3. Server-Performance (TTFB + externe Requests prominent)
-- Wiederverwendbare interne Sub-Komponente `MetricCard` extrahieren (DSGVO-Block damit ebenfalls refactoren), kein doppelter Code.
-- Loading-Text: „Lighthouse-, DSGVO- & Detail-Analyse laufen…"
-
-## 3. PDF-Export (Vektor, jsPDF + autotable)
-
-### Dependencies
-`bun add jspdf jspdf-autotable` (lazy-loaded beim Button-Klick → kein Einfluss auf Initial-Bundle der Startseite)
-
-### Neue Datei `src/lib/report-pdf.ts`
-Reine Client-Funktion `exportReport(payload)`, generiert A4-PDF:
-
-**Struktur:**
-1. **Deckblatt** — Connected-Wortmarke + Akzentbalken, Titel „Website-Analyse", URL, Datum, Strategie, Gesamtscore + DSGVO-Score als gezeichnete Kreise, 3–5-Zeilen-Zusammenfassung
-2. **Lighthouse-Scores** — autotable (Kategorie | Score | Bewertung), Zeilen farblich nach Score
-3. **Core Web Vitals** — autotable (Metrik | Wert | Bedeutung)
-4. **DSGVO-Detailanalyse** — pro Finding Block mit Status-Farbcode + Detail-Bullets
-5. **SEO / Mobile / Server-Performance** — analog
-6. **Screenshot-Seite** — `result.screenshot` (Base64) via `doc.addImage`
-7. **Empfehlungen** — automatisch aus allen Findings ≠ ok, gruppiert nach Bereich, 1-Satz-Handlungsempfehlung je Punkt (Mapping-Tabelle)
-8. **Footer auf jeder Seite** — „Connected Webdesign — Robin Lehmann", Kontakt (E-Mail/Tel/URL), Seitenzahl, Generierungs-Datum
-9. **Kontakt-CTA letzte Seite** — Karte mit Akzentfarbe, Hinweis „heuristische Analyse, keine Rechtsberatung"
-
-### Farben & Design
-- Aus dem Design-System abgeleitet, in PDF-tauglichem RGB hartcodiert (jsPDF kann kein oklch)
-- Score-Farben: gleiche Schwellwerte wie UI (≥90 grün, ≥50 gelb, sonst rot)
-- Hintergrund weiß (druckfreundlich), Akzentstreifen in Primary
-
-### Button
-- Oben rechts im Ergebnis-Bereich, `glass` Pill-Button mit Download-Icon
-- Disabled solange nicht alle drei Analysen abgeschlossen sind
-- Dateiname: `website-check-{hostname}-{YYYY-MM-DD}.pdf`
+## 8. Helper: absolute URL zur Request-Origin
+- Neu: `src/lib/origin.functions.ts` mit `getRequestOrigin` Server-Fn (liest `host` + `x-forwarded-proto`)
+- Wird in Routes per Loader aufgerufen, an `head()` via `loaderData` weitergegeben, damit `og:image`/`og:url`/`canonical` **absolute** URLs sind (Social-Crawler verlangen das)
+- Fallback: wenn Origin leer, relative Pfade
 
 ## Technische Details
-- **SSRF-Schutz / Timeout / User-Agent**: gemeinsame Helper aus `dsgvo.functions.ts` in `src/lib/url-fetch.server.ts` extrahieren, beide Server Functions importieren sie.
-- **TypeScript-Typen** aller Results exportieren, damit der PDF-Generator typsicher ist.
-- **linkedom** ist bereits Dependency — keine neue für SEO/Mobile.
-- **Bundle**: jspdf+autotable ~250 KB, via dynamischem `import()` lazy beim Klick geladen.
-
-## Out of Scope
-- Keine Unterseiten-Analyse
-- Kein Speichern der Ergebnisse in einer Datenbank
-- Keine E-Mail-Zustellung des PDFs (nur Download)
-- Nur Deutsch
+- Canonical nur in Leaf-Routes (TanStack Concat-Bug bei `links`)
+- `og:image` nur in Leaves, nie im Root
+- Relative Pfade in `og:url`/`canonical` falls Loader/Origin nicht greift; sonst absolut über `loaderData.origin`
+- Kein neues npm-Paket nötig
 
 ## Geänderte / neue Dateien
-- neu: `src/lib/url-fetch.server.ts`
-- neu: `src/lib/extended-audit.functions.ts`
-- neu: `src/lib/report-pdf.ts`
-- bearbeitet: `src/lib/dsgvo.functions.ts` (Helper extrahieren)
-- bearbeitet: `src/components/site/WebsiteCheck.tsx` (3 Card-Blöcke, Export-Button, MetricCard-Refactor)
-- bearbeitet: `package.json` / `bun.lock` (jspdf, jspdf-autotable)
+- neu: `src/assets/og-image.jpg`
+- neu: `src/lib/origin.functions.ts`
+- neu: `src/routes/sitemap[.]xml.ts`
+- neu: `public/robots.txt`
+- neu: `public/favicon.svg`
+- neu: `public/apple-touch-icon.png`
+- neu: `public/site.webmanifest`
+- bearbeitet: `src/routes/__root.tsx` (Defaults, Favicon-Links, JSON-LD Organization/LocalBusiness/WebSite, twitter:card)
+- bearbeitet: `src/routes/index.tsx` (canonical, og:url, og:image, Loader für origin)
+- bearbeitet: `src/routes/about.tsx` (dito + Person-JSON-LD optional, BreadcrumbList)
+- bearbeitet: `src/routes/services.tsx` (dito + Service-JSON-LD, BreadcrumbList)
+- bearbeitet: `src/routes/references.tsx` (dito + BreadcrumbList)
+- bearbeitet: `src/routes/contact.tsx` (dito + ContactPage-JSON-LD, BreadcrumbList)
+- bearbeitet: `src/routes/impressum.tsx` (canonical, noindex, BreadcrumbList)
+- bearbeitet: `src/routes/datenschutz.tsx` (canonical, noindex, BreadcrumbList)
+
+## Out of Scope
+- Echte Inhalte/Texte ändern (nur Meta)
+- Bildergenerierung für Hero/Portfolio
+- Kontaktformular, Rate-Limit, Analytics (separate Schritte aus dem Pre-Launch-Check)

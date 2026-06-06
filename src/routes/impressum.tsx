@@ -1,13 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Hero as PageHero } from "@/components/site/PageHero";
+import { getRequestOrigin } from "@/lib/origin.functions";
+import { buildPageHead, breadcrumbList } from "@/lib/seo";
 
 export const Route = createFileRoute("/impressum")({
-  head: () => ({
-    meta: [
-      { title: "Impressum | Connected" },
-      { name: "description", content: "Impressum von Connected – Robin Lehmann, Heidelberg." },
-    ],
-  }),
+  loader: async () => ({ origin: await getRequestOrigin() }),
+  head: ({ loaderData }) => {
+    const origin = loaderData?.origin ?? "";
+    return buildPageHead({
+      origin,
+      path: "/impressum",
+      title: "Impressum | Connected",
+      description: "Impressum von Connected – Robin Lehmann, Heidelberg.",
+      noindex: true,
+      jsonLd: [
+        breadcrumbList(origin, [
+          { name: "Start", path: "/" },
+          { name: "Impressum", path: "/impressum" },
+        ]),
+      ],
+    });
+  },
   component: ImpressumPage,
 });
 

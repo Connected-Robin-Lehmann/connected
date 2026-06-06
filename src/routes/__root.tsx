@@ -78,28 +78,79 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+const ORGANIZATION_LD = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Connected",
+  founder: { "@type": "Person", name: "Robin Lehmann" },
+  email: "robin.lehmann@connected-webdesign.de",
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "Dürerstraße 10",
+    postalCode: "69126",
+    addressLocality: "Heidelberg",
+    addressCountry: "DE",
+  },
+};
+
+const LOCAL_BUSINESS_LD = {
+  "@context": "https://schema.org",
+  "@type": "ProfessionalService",
+  name: "Connected — Webdesign & Webentwicklung",
+  description:
+    "Webdesign, Webentwicklung und Betreuung aus Heidelberg von Robin Lehmann.",
+  founder: { "@type": "Person", name: "Robin Lehmann" },
+  email: "robin.lehmann@connected-webdesign.de",
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "Dürerstraße 10",
+    postalCode: "69126",
+    addressLocality: "Heidelberg",
+    addressCountry: "DE",
+  },
+  areaServed: [
+    { "@type": "City", name: "Heidelberg" },
+    { "@type": "AdministrativeArea", name: "Rhein-Neckar" },
+    { "@type": "Country", name: "Deutschland" },
+  ],
+  serviceType: [
+    "Webdesign",
+    "Webentwicklung",
+    "Website-Wartung",
+    "Website-Betreuung",
+  ],
+  priceRange: "€€",
+};
+
+const WEBSITE_LD = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Connected",
+  inLanguage: "de-DE",
+};
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Connected — Webdesign & Webentwicklung aus Heidelberg" },
-      {
-        name: "description",
-        content:
-          "Connected — Webdesign, Webentwicklung und Betreuung aus Heidelberg von Robin Lehmann.",
-      },
       { name: "author", content: "Robin Lehmann" },
-      { property: "og:title", content: "Connected — Webdesign aus Heidelberg" },
-      {
-        property: "og:description",
-        content: "Professionelle Webentwicklung und Betreuung für kleine Unternehmen.",
-      },
+      { name: "theme-color", content: "#0a0f1c" },
+      { property: "og:site_name", content: "Connected" },
+      { property: "og:locale", content: "de_DE" },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
+      { rel: "manifest", href: "/site.webmanifest" },
+    ],
+    scripts: [
+      { type: "application/ld+json", children: JSON.stringify(ORGANIZATION_LD) },
+      { type: "application/ld+json", children: JSON.stringify(LOCAL_BUSINESS_LD) },
+      { type: "application/ld+json", children: JSON.stringify(WEBSITE_LD) },
     ],
   }),
   shellComponent: RootShell,
