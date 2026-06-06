@@ -1,13 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Hero as PageHero } from "@/components/site/PageHero";
+import { getRequestOrigin } from "@/lib/origin.functions";
+import { buildPageHead, breadcrumbList } from "@/lib/seo";
 
 export const Route = createFileRoute("/datenschutz")({
-  head: () => ({
-    meta: [
-      { title: "Datenschutz | Connected" },
-      { name: "description", content: "Datenschutzerklärung von Connected – Robin Lehmann, Heidelberg." },
-    ],
-  }),
+  loader: async () => ({ origin: await getRequestOrigin() }),
+  head: ({ loaderData }) => {
+    const origin = loaderData?.origin ?? "";
+    return buildPageHead({
+      origin,
+      path: "/datenschutz",
+      title: "Datenschutz | Connected",
+      description:
+        "Datenschutzerklärung von Connected – Robin Lehmann, Heidelberg.",
+      noindex: true,
+      jsonLd: [
+        breadcrumbList(origin, [
+          { name: "Start", path: "/" },
+          { name: "Datenschutz", path: "/datenschutz" },
+        ]),
+      ],
+    });
+  },
   component: DatenschutzPage,
 });
 
