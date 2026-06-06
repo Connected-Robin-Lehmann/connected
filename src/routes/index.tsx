@@ -6,23 +6,22 @@ import { Portfolio } from "@/components/site/Portfolio";
 import { Process } from "@/components/site/Process";
 import { Contact } from "@/components/site/Contact";
 import { WebsiteCheck } from "@/components/site/WebsiteCheck";
+import { getRequestOrigin } from "@/lib/origin.functions";
+import { buildPageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Connected — Webdesign & Webentwicklung aus Heidelberg" },
-      {
-        name: "description",
-        content:
-          "Connected Webdesign — Freelance Webentwicklung aus Heidelberg von Robin Lehmann. Schnelle, moderne Websites für kleine Unternehmen.",
-      },
-      { property: "og:title", content: "Connected — Webdesign aus Heidelberg" },
-      {
-        property: "og:description",
-        content: "Professionelle Webentwicklung für kleine Unternehmen in Heidelberg.",
-      },
-    ],
-  }),
+  loader: async () => ({ origin: await getRequestOrigin() }),
+  head: ({ loaderData }) =>
+    buildPageHead({
+      origin: loaderData?.origin ?? "",
+      path: "/",
+      title: "Connected — Webdesign & Webentwicklung aus Heidelberg",
+      description:
+        "Freelance Webentwicklung aus Heidelberg von Robin Lehmann — schnelle, moderne Websites für kleine Unternehmen, persönlich betreut.",
+      ogTitle: "Connected — Webdesign aus Heidelberg",
+      ogDescription:
+        "Professionelle Webentwicklung für kleine Unternehmen in Heidelberg.",
+    }),
   component: Index,
 });
 
