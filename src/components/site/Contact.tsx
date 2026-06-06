@@ -81,24 +81,99 @@ export function Contact({ compact = false }: { compact?: boolean }) {
         </div>
 
         <div className={`grid gap-6 ${compact ? "" : "lg:grid-cols-[1.4fr_1fr]"}`}>
-          {status === "success" ? (
-            <div className="reveal glass rounded-3xl p-10 md:p-14 flex flex-col items-center text-center">
-              <div className="h-16 w-16 rounded-full bg-primary/15 flex items-center justify-center mb-6">
-                <CheckCircle2 className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-2xl md:text-3xl font-bold mb-3">Nachricht angekommen!</h3>
-              <p className="text-muted-foreground max-w-md">
-                Danke für deine Anfrage. Du bekommst gleich eine Bestätigung per E-Mail —
-                ich melde mich innerhalb von 24 Stunden persönlich bei dir zurück.
-              </p>
-              <button
-                onClick={() => setStatus("idle")}
-                className="mt-8 text-sm text-muted-foreground hover:text-foreground transition"
+          <AnimatePresence mode="wait">
+            {status === "success" ? (
+              <motion.div
+                key="success"
+                initial={{ opacity: 0, scale: 0.92, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: -10 }}
+                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+                className="reveal glass rounded-3xl p-10 md:p-14 flex flex-col items-center text-center relative overflow-hidden"
               >
-                Weitere Nachricht senden
-              </button>
-            </div>
-          ) : (
+                <motion.div
+                  className="absolute inset-0 pointer-events-none"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  {[...Array(6)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      className="absolute left-1/2 top-[72px] w-1.5 h-1.5 rounded-full bg-primary"
+                      initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+                      animate={{
+                        x: Math.cos((i / 6) * Math.PI * 2) * 60,
+                        y: Math.sin((i / 6) * Math.PI * 2) * 60 - 10,
+                        opacity: 0,
+                        scale: 0,
+                      }}
+                      transition={{
+                        duration: 0.7,
+                        delay: 0.25 + i * 0.04,
+                        ease: "easeOut",
+                      }}
+                    />
+                  ))}
+                </motion.div>
+
+                <motion.div
+                  className="h-16 w-16 rounded-full bg-primary/15 flex items-center justify-center mb-6 relative"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 260, damping: 16, delay: 0.1 }}
+                >
+                  <motion.div
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.25 }}
+                  >
+                    <CheckCircle2 className="h-8 w-8 text-primary" />
+                  </motion.div>
+                  <motion.div
+                    className="absolute inset-0 rounded-full border-2 border-primary"
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1.6, opacity: 0 }}
+                    transition={{ duration: 0.8, delay: 0.2 }}
+                  />
+                  <motion.div
+                    className="absolute inset-0 rounded-full border border-primary/50"
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 2, opacity: 0 }}
+                    transition={{ duration: 1, delay: 0.35 }}
+                  />
+                </motion.div>
+
+                <motion.h3
+                  className="text-2xl md:text-3xl font-bold mb-3"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.35, duration: 0.35 }}
+                >
+                  Nachricht angekommen!
+                </motion.h3>
+                <motion.p
+                  className="text-muted-foreground max-w-md"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.45, duration: 0.35 }}
+                >
+                  Danke für deine Anfrage. Du bekommst gleich eine Bestätigung per E-Mail —
+                  ich melde mich innerhalb von 24 Stunden persönlich bei dir zurück.
+                </motion.p>
+                <motion.button
+                  onClick={() => setStatus("idle")}
+                  className="mt-8 text-sm text-muted-foreground hover:text-foreground transition"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  Weitere Nachricht senden
+                </motion.button>
+              </motion.div>
+            ) : (
             <form onSubmit={onSubmit} className="reveal glass rounded-3xl p-8 md:p-10 space-y-5" noValidate>
               {/* Honeypot — für Menschen unsichtbar */}
               <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}>
