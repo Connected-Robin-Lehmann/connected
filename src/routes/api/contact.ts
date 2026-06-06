@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 const TO_EMAIL = "robin.lehmann@connected-webdesign.de";
-const FROM_EMAIL = "Connected <onboarding@resend.dev>"; // TODO: nach Domain-Verify auf kontakt@connected-webdesign.de umstellen
+const FROM_EMAIL = "Connected <kontakt@connected-webdesign.de>";
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
 
 const schema = z.object({
