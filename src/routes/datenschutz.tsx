@@ -52,11 +52,12 @@ function DatenschutzPage() {
           <Block title="2. Hosting">
             <h3 className="text-foreground font-semibold">Externes Hosting</h3>
             <p>
-              Diese Website wird bei einem externen Dienstleister gehostet. Personenbezogene Daten,
-              die auf dieser Website erfasst werden, werden auf den Servern des Hosters
-              gespeichert. Hierbei kann es sich v. a. um IP-Adressen, Kontaktanfragen, Meta- und
-              Kommunikationsdaten, Vertragsdaten, Kontaktdaten, Namen, Websitezugriffe und
-              sonstige über eine Website generierte Daten handeln.
+              Diese Website wird bei der Lovable GmbH („Lovable", https://lovable.dev)
+              gehostet, die ihrerseits eine global verteilte Edge-Infrastruktur einsetzt.
+              Personenbezogene Daten, die auf dieser Website erfasst werden, werden auf den
+              Servern des Hosters gespeichert. Hierbei kann es sich v. a. um IP-Adressen,
+              Kontaktanfragen, Meta- und Kommunikationsdaten, Vertragsdaten, Kontaktdaten,
+              Namen, Websitezugriffe und sonstige über eine Website generierte Daten handeln.
             </p>
             <p>
               Die Nutzung des Hosters erfolgt zum Zwecke der Vertragserfüllung gegenüber unseren
@@ -67,6 +68,7 @@ function DatenschutzPage() {
               geschlossen.
             </p>
           </Block>
+
 
           <Block title="3. Allgemeine Hinweise und Pflichtinformationen">
             <h3 className="text-foreground font-semibold">Datenschutz</h3>
@@ -115,10 +117,26 @@ function DatenschutzPage() {
             </p>
             <h3 className="text-foreground font-semibold mt-4">Kontaktformular</h3>
             <p>
-              Das Kontaktformular auf dieser Website nutzt keine serverseitige Übertragung. Beim
-              Absenden öffnet sich Ihr lokales E-Mail-Programm mit den eingegebenen Daten, sodass
-              Sie die Nachricht selbst versenden. Die eingegebenen Daten werden also nicht auf
-              unserer Website gespeichert.
+              Wenn Sie uns über das Kontaktformular eine Nachricht zukommen lassen, werden Ihre
+              Angaben aus dem Formular (Name, E-Mail-Adresse, ggf. Telefonnummer sowie Ihre
+              Nachricht) zum Zwecke der Bearbeitung Ihrer Anfrage und für den Fall von
+              Anschlussfragen bei uns gespeichert. Die Übermittlung erfolgt SSL-/TLS-verschlüsselt
+              über unseren Server an unseren E-Mail-Versanddienstleister.
+            </p>
+            <p>
+              Für den Versand der Kontaktanfragen als E-Mail nutzen wir den Dienst{" "}
+              <strong>Resend</strong> (Resend, Inc., 2261 Market Street #4667, San Francisco,
+              CA 94114, USA). Resend verarbeitet hierbei die im Formular eingegebenen Daten in
+              unserem Auftrag (Art. 28 DSGVO). Die Übertragung in die USA erfolgt auf Grundlage
+              des EU-US Data Privacy Framework sowie ergänzender Standardvertragsklauseln.
+            </p>
+            <p>
+              Rechtsgrundlage für die Verarbeitung ist Art. 6 Abs. 1 lit. b DSGVO (Bearbeitung
+              vorvertraglicher Anfragen) sowie Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse
+              an der effektiven Bearbeitung von Kontaktanfragen). Die Daten verbleiben bei uns,
+              bis Sie uns zur Löschung auffordern, Ihre Einwilligung zur Speicherung widerrufen
+              oder der Zweck für die Datenspeicherung entfällt – zwingende gesetzliche
+              Aufbewahrungspflichten bleiben unberührt.
             </p>
             <h3 className="text-foreground font-semibold mt-4">Anfrage per E-Mail oder Telefon</h3>
             <p>
@@ -129,6 +147,7 @@ function DatenschutzPage() {
               Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Beantwortung Ihrer
               Anfrage). Diese Daten geben wir nicht ohne Ihre Einwilligung weiter.
             </p>
+
           </Block>
 
           <Block title="5. Plugins und Tools">
@@ -146,6 +165,29 @@ function DatenschutzPage() {
               Marketing-Tools (z. B. Google Analytics, Facebook Pixel). Es findet keine
               automatisierte Auswertung Ihres Nutzungsverhaltens statt.
             </p>
+            <h3 className="text-foreground font-semibold mt-4">Google PageSpeed Insights (Website-Check)</h3>
+            <p>
+              Auf unserer Startseite bieten wir einen freiwilligen Website-Check an. Wenn Sie eine
+              URL eingeben und die Analyse starten, wird diese URL zusammen mit Ihrer IP-Adresse
+              direkt aus Ihrem Browser an die Google PageSpeed Insights API (Google Ireland
+              Limited, Gordon House, Barrow Street, Dublin 4, Irland) übermittelt, um die
+              Analyse-Ergebnisse abzurufen. Es werden keine personenbezogenen Daten von Ihrer
+              Person an Google übertragen, die über die technisch notwendige Verbindung
+              hinausgehen. Die Nutzung erfolgt nur auf Ihre aktive Anforderung hin auf Grundlage
+              von Art. 6 Abs. 1 lit. a DSGVO (Einwilligung durch Klick auf den Analyse-Button)
+              sowie Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Bereitstellung
+              dieses Werkzeugs). Details: {" "}
+              <a
+                href="https://policies.google.com/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-foreground hover:text-primary transition"
+              >
+                policies.google.com/privacy
+              </a>
+              .
+            </p>
+
           </Block>
 
           <Block title="6. Ihre Rechte">
