@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, Send, Phone, Clock, CheckCircle2 } from "lucide-react";
+import { Mail, Send, Phone, Clock, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { z } from "zod";
 
 const schema = z.object({
@@ -12,12 +12,17 @@ const schema = z.object({
 
 const EMAIL = "robin.lehmann@connected-webdesign.de";
 
+type Status = "idle" | "submitting" | "success" | "error";
+
 export function Contact({ compact = false }: { compact?: boolean }) {
-  const [status, setStatus] = useState<null | "ok" | "err">(null);
+  const [status, setStatus] = useState<Status>("idle");
+  const [errorMsg, setErrorMsg] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (status === "submitting") return;
+
     const fd = new FormData(e.currentTarget);
     const data = {
       name: String(fd.get("name") || ""),
@@ -25,22 +30,36 @@ export function Contact({ compact = false }: { compact?: boolean }) {
       subject: String(fd.get("subject") || ""),
       website: String(fd.get("website") || ""),
       message: String(fd.get("message") || ""),
+      hp: String(fd.get("hp") || ""),
     };
+
     const res = schema.safeParse(data);
     if (!res.success) {
       const errs: Record<string, string> = {};
       res.error.issues.forEach((i) => (errs[i.path[0] as string] = i.message));
       setErrors(errs);
-      setStatus("err");
       return;
     }
     setErrors({});
-    const subject = encodeURIComponent(data.subject || `Projektanfrage von ${data.name}`);
-    const body = encodeURIComponent(
-      `${data.message}\n\n${data.website ? `Website: ${data.website}\n` : ""}— ${data.name} (${data.email})`
-    );
-    window.location.href = `mailto:${EMAIL}?subject=${subject}&body=${body}`;
-    setStatus("ok");
+    setStatus("submitting");
+    setErrorMsg("");
+
+    try {
+      const r = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const json = await r.json().catch(() => ({}));
+      if (!r.ok || !json.ok) {
+        throw new Error(json?.error || `HTTP ${r.status}`);
+      }
+      setStatus("success");
+    } catch (err) {
+      console.error(err);
+      setStatus("error");
+      setErrorMsg("Der Versand hat leider nicht geklappt. Bitte versuche es erneut oder schreibe mir direkt eine E-Mail.");
+    }
   };
 
   return (
@@ -61,45 +80,87 @@ export function Contact({ compact = false }: { compact?: boolean }) {
         </div>
 
         <div className={`grid gap-6 ${compact ? "" : "lg:grid-cols-[1.4fr_1fr]"}`}>
-          <form onSubmit={onSubmit} className="reveal glass rounded-3xl p-8 md:p-10 space-y-5">
-            <div className="grid md:grid-cols-2 gap-5">
-              <Field label="Name *" name="name" placeholder="Max Mustermann" error={errors.name} />
-              <Field label="E-Mail *" name="email" type="email" placeholder="max@beispiel.de" error={errors.email} />
-            </div>
-            <div className="grid md:grid-cols-2 gap-5">
-              <Field label="Betreff" name="subject" placeholder="Worum geht es?" />
-              <Field label="Website" name="website" placeholder="meine-firma.de" />
-            </div>
-            <div>
-              <label className="block text-sm text-muted-foreground mb-2">Nachricht *</label>
-              <textarea
-                name="message"
-                rows={6}
-                placeholder="Erzähl mir kurz von deinem Projekt..."
-                className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 outline-none focus:border-primary transition"
-              />
-              {errors.message && <p className="text-xs text-destructive mt-1">{errors.message}</p>}
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
-              <a
-                href={`mailto:${EMAIL}`}
-                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-              >
-                <Mail className="h-4 w-4" />
-                {EMAIL}
-              </a>
+          {status === "success" ? (
+            <div className="reveal glass rounded-3xl p-10 md:p-14 flex flex-col items-center text-center">
+              <div className="h-16 w-16 rounded-full bg-primary/15 flex items-center justify-center mb-6">
+                <CheckCircle2 className="h-8 w-8 text-primary" />
+              </div>
+              <h3 className="text-2xl md:text-3xl font-bold mb-3">Nachricht angekommen!</h3>
+              <p className="text-muted-foreground max-w-md">
+                Danke für deine Anfrage. Du bekommst gleich eine Bestätigung per E-Mail —
+                ich melde mich innerhalb von 24 Stunden persönlich bei dir zurück.
+              </p>
               <button
-                type="submit"
-                className="btn-primary inline-flex items-center gap-2 rounded-full px-7 py-3.5 font-medium hover:brightness-110 hover:-translate-y-0.5 transition"
+                onClick={() => setStatus("idle")}
+                className="mt-8 text-sm text-muted-foreground hover:text-foreground transition"
               >
-                Projekt starten
-                <Send className="h-4 w-4" />
+                Weitere Nachricht senden
               </button>
             </div>
-            {status === "ok" && (
-              <p className="text-sm text-primary">Danke! Dein E-Mail-Programm sollte sich öffnen.</p>
-            )}
-          </form>
+          ) : (
+            <form onSubmit={onSubmit} className="reveal glass rounded-3xl p-8 md:p-10 space-y-5" noValidate>
+              {/* Honeypot — für Menschen unsichtbar */}
+              <div aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden" }}>
+                <label>
+                  Bitte leer lassen
+                  <input type="text" name="hp" tabIndex={-1} autoComplete="off" />
+                </label>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-5">
+                <Field label="Name *" name="name" placeholder="Max Mustermann" error={errors.name} />
+                <Field label="E-Mail *" name="email" type="email" placeholder="max@beispiel.de" error={errors.email} />
+              </div>
+              <div className="grid md:grid-cols-2 gap-5">
+                <Field label="Betreff" name="subject" placeholder="Worum geht es?" />
+                <Field label="Website" name="website" placeholder="meine-firma.de" />
+              </div>
+              <div>
+                <label className="block text-sm text-muted-foreground mb-2">Nachricht *</label>
+                <textarea
+                  name="message"
+                  rows={6}
+                  placeholder="Erzähl mir kurz von deinem Projekt..."
+                  className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 outline-none focus:border-primary transition"
+                />
+                {errors.message && <p className="text-xs text-destructive mt-1">{errors.message}</p>}
+              </div>
+
+              {status === "error" && (
+                <div className="flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm">
+                  <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+                <a
+                  href={`mailto:${EMAIL}`}
+                  className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+                >
+                  <Mail className="h-4 w-4" />
+                  {EMAIL}
+                </a>
+                <button
+                  type="submit"
+                  disabled={status === "submitting"}
+                  className="btn-primary inline-flex items-center gap-2 rounded-full px-7 py-3.5 font-medium hover:brightness-110 hover:-translate-y-0.5 transition disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                >
+                  {status === "submitting" ? (
+                    <>
+                      Wird gesendet…
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    </>
+                  ) : (
+                    <>
+                      Projekt starten
+                      <Send className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
 
           {!compact && (
             <div className="space-y-6">
