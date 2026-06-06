@@ -1,76 +1,85 @@
 ## Ziel
-Alle SEO/Meta-Punkte aus dem Pre-Launch-Check umsetzen: vollständige Per-Route-Metadaten, canonical & og:url, OG-Bild, JSON-LD (Organization + LocalBusiness + WebSite + BreadcrumbList), sitemap.xml, robots.txt, Web-Manifest und Favicon-Setup.
 
-## 1. OG-Image (gebrandet, 1200×630)
-- Erzeugung via `imagegen` (premium, da Text), Datei `src/assets/og-image.jpg`
-- Motiv: dunkler Hintergrund mit Primary-Akzent, Wortmarke „Connected." groß, Subline „Webdesign & Webentwicklung aus Heidelberg", dezenter Code-/Browser-Hint
-- Import als ES6-Asset, URL via Vite-Import in `og:image`/`twitter:image` (absolut zur Origin gebaut, siehe Punkt 6)
+Das Kontaktformular versendet die Anfrage serverseitig über den **Resend Connector** — kein `mailto:` mehr. Der Absender bekommt zusätzlich eine gebrandete Eingangsbestätigung. Schutz vor Bots über ein verstecktes Honeypot-Feld.
 
-## 2. Per-Route head() vervollständigen
-Für jede Route (`/`, `/about`, `/services`, `/references`, `/contact`, `/impressum`, `/datenschutz`):
-- `title`, `description`, `og:title`, `og:description` (bereits vorhanden, leicht geschärft)
-- **neu**: `og:url` (relativer Pfad), `og:image`, `twitter:image`, `twitter:card: summary_large_image`, `og:locale: de_DE`
-- **neu**: `<link rel="canonical">` in `links` (nur Leaf-Routes, relativ)
-- `/impressum` und `/datenschutz` bekommen zusätzlich `robots: noindex,follow` (rechtliche Seiten gehören nicht in Suchergebnisse, sind aber crawlbar)
+## Voraussetzung (einmalig durch dich)
 
-## 3. Root-Head bereinigen & sitewide Defaults setzen (`src/routes/__root.tsx`)
-- `og:site_name: "Connected"` + `og:locale: de_DE` ergänzen
-- `twitter:card` von `summary` auf `summary_large_image` heben
-- `og:image` **nicht** in Root setzen (würde Leaf-Bilder überschreiben — laut head-meta-Regel)
-- Canonical NICHT in Root (Dedupe-Caveat)
-- Favicon-/Manifest-Links ergänzen: `icon`, `apple-touch-icon`, `manifest`, `theme-color`
-- JSON-LD-Scripts (siehe Punkt 4) im Root via `scripts`-Array
+- Resend Connector verbinden (Lovable fragt nach deinem Resend-Account und richtet die Domain `connected-webdesign.de` ein — DNS-Einträge bei deinem Registrar setzen).
+- Solange die Domain noch nicht verifiziert ist, läuft der Versand über `onboarding@resend.dev` (nur als Test, geht aber an dich).
 
-## 4. JSON-LD strukturierte Daten
-- **Root**: `Organization` + `WebSite` (mit `potentialAction` für Sitelinks-Searchbox auf später vorbereitet, hier weglassen da keine interne Suche)
-- **Root zusätzlich**: `LocalBusiness` (Subtyp `ProfessionalService`) — Name, Inhaber, Adresse (Dürerstraße 10, 69126 Heidelberg), E-Mail, `areaServed: Heidelberg/Rhein-Neckar`, `serviceType`, `url`
-- **/services**: `Service`-Array (Webdesign, Webentwicklung, Wartung) mit `provider`-Referenz
-- **/contact**: `ContactPage` + `ContactPoint`
-- **Deep-Routes** (`/about`, `/services`, `/references`, `/contact`, `/impressum`, `/datenschutz`): `BreadcrumbList` (Start → Seite)
+## Was gebaut wird
 
-## 5. sitemap.xml (Server-Route)
-- Neu: `src/routes/sitemap[.]xml.ts` mit `BASE_URL = ""` (TODO-Kommentar bleibt, da noch keine Custom-Domain)
-- Entries: `/`, `/about`, `/services`, `/references`, `/contact` (rechtliche Seiten weglassen, da noindex)
-- Priorities/changefreq sinnvoll gesetzt
+### 1. Server-Route `src/routes/api/contact.ts` (POST)
+- Empfängt JSON: `{ name, email, subject?, website?, message, hp }`
+- Validiert mit `zod` (Längen, E-Mail-Format, Pflichtfelder)
+- **Honeypot**: wenn `hp` befüllt → `200 ok` ohne Versand (Bot still abweisen)
+- Sendet zwei Mails über `https://connector-gateway.lovable.dev/resend/emails`:
+  - **An dich** (`robin.lehmann@connected-webdesign.de`): formatierte HTML-Mail mit allen Feldern, `reply_to` = E-Mail des Absenders → du kannst direkt antworten
+  - **An den Absender**: kurze gebrandete Bestätigung („Danke für deine Anfrage, ich melde mich innerhalb von 24 Stunden")
+- Liefert `{ ok: true }` oder strukturierte Fehler (400 Validation, 502 Gateway, 500 generisch)
+- Liest `process.env.LOVABLE_API_KEY` + `process.env.RESEND_API_KEY`
 
-## 6. robots.txt
-- Neu: `public/robots.txt` mit `User-agent: *` / `Allow: /` — kein `Sitemap:`-Eintrag, solange keine Custom-Domain (laut sitemap-robots-Regel)
+### 2. E-Mail-Templates (inline im Handler, kein React Email nötig)
+- Beide Mails als schlanke Inline-HTML-Strings im Connected-Branding (dunkler Hintergrund, primary-Akzent, Logo-Text „Connected.")
+- Plain-Text-Fallback (`text`-Feld)
 
-## 7. Favicon & Web-Manifest
-- `public/favicon.svg` — minimaler Primary-Punkt im „Connected." Stil (SVG, schnell)
-- `public/apple-touch-icon.png` — 180×180 (Primary-Hintergrund mit weißem Punkt, via imagegen fast)
-- `public/site.webmanifest` mit `name`, `short_name`, `theme_color`, `background_color`, Icon-Referenzen
-- Verlinkung in `__root.tsx` (`links`)
+### 3. `src/components/site/Contact.tsx` umbauen
+- `mailto:`-Logik raus, `fetch("/api/contact", { method: "POST", … })` rein
+- States: `idle | submitting | success | error`
+- Button zeigt Spinner + „Wird gesendet…" während Submit, ist disabled
+- Erfolgs-UI: grüne Bestätigungskarte mit Checkmark statt Formular („Danke! Deine Nachricht ist angekommen. Ich melde mich innerhalb von 24h.")
+- Fehler-UI: Toast / Inline-Hinweis mit Retry
+- Honeypot: unsichtbares `<input name="hp">` mit `tabindex={-1}`, `autocomplete="off"`, `aria-hidden`, off-screen positioniert
+- `mailto:`-Link unter dem Formular bleibt als Fallback erhalten
 
-## 8. Helper: absolute URL zur Request-Origin
-- Neu: `src/lib/origin.functions.ts` mit `getRequestOrigin` Server-Fn (liest `host` + `x-forwarded-proto`)
-- Wird in Routes per Loader aufgerufen, an `head()` via `loaderData` weitergegeben, damit `og:image`/`og:url`/`canonical` **absolute** URLs sind (Social-Crawler verlangen das)
-- Fallback: wenn Origin leer, relative Pfade
+### 4. Kein neuer State / keine DB
+- Anfragen werden **nicht** gespeichert (keine Lovable Cloud benötigt). Du bekommst alles per Mail.
 
 ## Technische Details
-- Canonical nur in Leaf-Routes (TanStack Concat-Bug bei `links`)
-- `og:image` nur in Leaves, nie im Root
-- Relative Pfade in `og:url`/`canonical` falls Loader/Origin nicht greift; sonst absolut über `loaderData.origin`
-- Kein neues npm-Paket nötig
 
-## Geänderte / neue Dateien
-- neu: `src/assets/og-image.jpg`
-- neu: `src/lib/origin.functions.ts`
-- neu: `src/routes/sitemap[.]xml.ts`
-- neu: `public/robots.txt`
-- neu: `public/favicon.svg`
-- neu: `public/apple-touch-icon.png`
-- neu: `public/site.webmanifest`
-- bearbeitet: `src/routes/__root.tsx` (Defaults, Favicon-Links, JSON-LD Organization/LocalBusiness/WebSite, twitter:card)
-- bearbeitet: `src/routes/index.tsx` (canonical, og:url, og:image, Loader für origin)
-- bearbeitet: `src/routes/about.tsx` (dito + Person-JSON-LD optional, BreadcrumbList)
-- bearbeitet: `src/routes/services.tsx` (dito + Service-JSON-LD, BreadcrumbList)
-- bearbeitet: `src/routes/references.tsx` (dito + BreadcrumbList)
-- bearbeitet: `src/routes/contact.tsx` (dito + ContactPage-JSON-LD, BreadcrumbList)
-- bearbeitet: `src/routes/impressum.tsx` (canonical, noindex, BreadcrumbList)
-- bearbeitet: `src/routes/datenschutz.tsx` (canonical, noindex, BreadcrumbList)
+### Gateway-Call (Pseudocode)
+```ts
+await fetch("https://connector-gateway.lovable.dev/resend/emails", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${process.env.LOVABLE_API_KEY}`,
+    "X-Connection-Api-Key": process.env.RESEND_API_KEY!,
+  },
+  body: JSON.stringify({
+    from: "Connected <kontakt@connected-webdesign.de>",   // bzw. onboarding@resend.dev vor Domain-Verify
+    to: ["robin.lehmann@connected-webdesign.de"],
+    reply_to: data.email,
+    subject: `Neue Anfrage von ${data.name}`,
+    html, text,
+  }),
+});
+```
 
-## Out of Scope
-- Echte Inhalte/Texte ändern (nur Meta)
-- Bildergenerierung für Hero/Portfolio
-- Kontaktformular, Rate-Limit, Analytics (separate Schritte aus dem Pre-Launch-Check)
+### Zod-Schema (serverseitig, identisch zu Client)
+- `name`: 1–100, trim
+- `email`: gültig, ≤255
+- `subject`: ≤200, optional
+- `website`: ≤200, optional
+- `message`: 5–2000, trim
+- `hp`: optional string (Honeypot)
+
+### Out of Scope (bewusst nicht jetzt)
+- Rate-Limit pro IP (kannst du nachrüsten, sobald Cloud aktiv ist und wir KV/DB nutzen können)
+- Cloudflare Turnstile
+- Speicherung in DB
+- Datei-Anhänge
+
+## Dateien
+
+**Neu:**
+- `src/routes/api/contact.ts`
+
+**Geändert:**
+- `src/components/site/Contact.tsx`
+
+## Was du danach tun musst
+
+1. Resend Connector verbinden (ich löse den Dialog im Build-Schritt aus).
+2. In Resend deine Domain `connected-webdesign.de` verifizieren (DNS-Records setzen). Bis dahin testet das Formular mit dem Resend-Default-Absender.
+3. Testanfrage abschicken → Mail in deinem Postfach prüfen.
