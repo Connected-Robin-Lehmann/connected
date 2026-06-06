@@ -12,4 +12,7 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Build target: Vercel (Build Output API v3). Nitro emits to `.vercel/output/`.
+  // Lovable's sandbox preview is unaffected — it uses the dev server, not Nitro.
+  nitro: { preset: "vercel" },
 });
