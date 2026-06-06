@@ -237,6 +237,7 @@ export function Contact({ compact = false }: { compact?: boolean }) {
               </div>
             </form>
           )}
+          </AnimatePresence>
 
           {!compact && (
             <div className="space-y-6">
