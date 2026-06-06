@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Mail, Send, Phone, Clock, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { z } from "zod";
+import { motion, AnimatePresence } from "framer-motion";
 
 const schema = z.object({
   name: z.string().trim().min(1, "Bitte gib deinen Namen ein").max(100),
